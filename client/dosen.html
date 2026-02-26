@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AttendSense - Portal Dosen</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f7f6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px;
+      }
+      .card {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+      }
+      input {
+        width: 90%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        width: 100%;
+        padding: 12px;
+        background-color: #0056b3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #004494;
+      }
+      #qr-container {
+        margin-top: 24px;
+        display: flex;
+        justify-content: center;
+        padding: 16px;
+        background: #fff;
+      }
+      .info-text {
+        color: #555;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Generate QR Presensi</h2>
+      <p class="info-text">
+        Masukkan detail sesi kuliah untuk membuat QR Code.
+      </p>
+
+      <input
+        type="text"
+        id="courseId"
+        placeholder="Contoh: cloud-101"
+        value="cloud-101"
+      />
+      <input
+        type="text"
+        id="sessionId"
+        placeholder="Contoh: sesi-02"
+        value="sesi-02"
+      />
+
+      <button onclick="generateQR()">Buat QR Code</button>
+
+      <div id="qr-container"></div>
+      <p id="status-message" class="info-text"></p>
+    </div>
+
+    <!-- <script>
+      // URL Apps Script
+      const BASE_URL =
+        "https://script.google.com/macros/s/AKfycbxwyCgcNJjN7Tw6qIsDAEXUj5LgYE5dZaOihHzfULg62U2jxOJIwx0Zi4LllddtPLHb/exec";
+
+      async function generateQR() {
+        const courseId = document.getElementById("courseId").value;
+        const sessionId = document.getElementById("sessionId").value;
+        const statusMessage = document.getElementById("status-message");
+        const qrContainer = document.getElementById("qr-container");
+
+        qrContainer.innerHTML = "";
+        statusMessage.innerText = "Meminta token dari server...";
+
+        const payload = {
+          course_id: courseId,
+          session_id: sessionId,
+          ts: new Date().toISOString(),
+        };
+
+        try {
+          // Fetch tanpa headers khusus agar browser memprosesnya sebagai Simple Request
+          const response = await fetch(BASE_URL + "/presence/qr/generate", {
+            method: "POST",
+            body: JSON.stringify(payload),
+            redirect: "follow",
+          });
+
+          const result = await response.json();
+
+          if (result.ok) {
+            const qrToken = result.data.qr_token;
+            statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
+
+            new QRCode(qrContainer, {
+              text: qrToken,
+              width: 200,
+              height: 200,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.H,
+            });
+          } else {
+            statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          statusMessage.innerText =
+            "Gagal (401 Unauthorized). Solusi: Pindahkan script ke akun Gmail pribadi.";
+        }
+      }
+    </script> -->
+    <script>
+      const BASE_URL =
+        "https://script.google.com/macros/s/AKfycbxwyCgcNJjN7Tw6qIsDAEXUj5LgYE5dZaOihHzfULg62U2jxOJIwx0Zi4LllddtPLHb/exec";
+
+      function generateQR() {
+        const courseId = document.getElementById("courseId").value;
+        const sessionId = document.getElementById("sessionId").value;
+        const statusMessage = document.getElementById("status-message");
+        const qrContainer = document.getElementById("qr-container");
+
+        qrContainer.innerHTML = "";
+        statusMessage.innerText = "Meminta token dari server...";
+
+        const payload = {
+          course_id: courseId,
+          session_id: sessionId,
+          ts: new Date().toISOString(),
+        };
+
+        const targetUrl = BASE_URL + "/presence/qr/generate";
+
+        // Menggunakan XMLHttpRequest sebagai ganti fetch API untuk bypass CORS GAS
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", targetUrl, true);
+
+        // Memaksa browser mengirim Simple Request
+        xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
+
+        xhr.onload = function () {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+
+              if (result.ok) {
+                const qrToken = result.data.qr_token;
+                statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
+
+                new QRCode(qrContainer, {
+                  text: qrToken,
+                  width: 200,
+                  height: 200,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H,
+                });
+              } else {
+                statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
+              }
+            } catch (e) {
+              statusMessage.innerText =
+                "Gagal membaca data balasan dari server.";
+              console.error("Parse error:", e);
+            }
+          } else {
+            statusMessage.innerText = `Error Server: Status ${xhr.status}`;
+          }
+        };
+
+        xhr.onerror = function () {
+          statusMessage.innerText =
+            "Gagal terhubung ke server (CORS/Jaringan).";
+        };
+
+        // Mengirim data berupa string JSON sesuai kontrak
+        xhr.send(JSON.stringify(payload));
+      }
+    </script>
+  </body>
+</html>
