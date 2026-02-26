@@ -85,60 +85,8 @@
     </div>
 
     <!-- <script>
-      // URL Apps Script
       const BASE_URL =
-        "https://script.google.com/macros/s/AKfycbxwyCgcNJjN7Tw6qIsDAEXUj5LgYE5dZaOihHzfULg62U2jxOJIwx0Zi4LllddtPLHb/exec";
-
-      async function generateQR() {
-        const courseId = document.getElementById("courseId").value;
-        const sessionId = document.getElementById("sessionId").value;
-        const statusMessage = document.getElementById("status-message");
-        const qrContainer = document.getElementById("qr-container");
-
-        qrContainer.innerHTML = "";
-        statusMessage.innerText = "Meminta token dari server...";
-
-        const payload = {
-          course_id: courseId,
-          session_id: sessionId,
-          ts: new Date().toISOString(),
-        };
-
-        try {
-          // Fetch tanpa headers khusus agar browser memprosesnya sebagai Simple Request
-          const response = await fetch(BASE_URL + "/presence/qr/generate", {
-            method: "POST",
-            body: JSON.stringify(payload),
-            redirect: "follow",
-          });
-
-          const result = await response.json();
-
-          if (result.ok) {
-            const qrToken = result.data.qr_token;
-            statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
-
-            new QRCode(qrContainer, {
-              text: qrToken,
-              width: 200,
-              height: 200,
-              colorDark: "#000000",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.H,
-            });
-          } else {
-            statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
-          }
-        } catch (error) {
-          console.error("Error:", error);
-          statusMessage.innerText =
-            "Gagal (401 Unauthorized). Solusi: Pindahkan script ke akun Gmail pribadi.";
-        }
-      }
-    </script> -->
-    <script>
-      const BASE_URL =
-        "https://script.google.com/macros/s/AKfycbxwyCgcNJjN7Tw6qIsDAEXUj5LgYE5dZaOihHzfULg62U2jxOJIwx0Zi4LllddtPLHb/exec";
+        "https://script.google.com/macros/s/AKfycbwRq4wPHPd2L5aBObz7l6VattTpgtUp82Z8_7Sy8HCWZ003xpvjKcO0fVPnXsAKbZkj/exec?path=ui";
 
       function generateQR() {
         const courseId = document.getElementById("courseId").value;
@@ -201,6 +149,61 @@
 
         // Mengirim data berupa string JSON sesuai kontrak
         xhr.send(JSON.stringify(payload));
+      }
+    </script> -->
+    <script>
+      // 1. Masukkan URL Web App GAS-mu yang baru (yang berakhiran /exec)
+      const BASE_URL = "https://script.google.com/macros/s/AKfycbwRq4wPHPd2L5aBObz7l6VattTpgtUp82Z8_7Sy8HCWZ003xpvjKcO0fVPnXsAKbZkj/exec?path=ui";
+
+      async function generateQR() {
+        const courseId = document.getElementById("courseId").value;
+        const sessionId = document.getElementById("sessionId").value;
+        const statusMessage = document.getElementById("status-message");
+        const qrContainer = document.getElementById("qr-container");
+
+        qrContainer.innerHTML = "";
+        statusMessage.innerText = "Meminta token dari server...";
+
+        const payload = {
+          course_id: courseId,
+          session_id: sessionId,
+          ts: new Date().toISOString(),
+        };
+
+        try {
+          // 2. PERHATIKAN PERUBAHAN DI SINI: Kita menggunakan "?path="
+          const targetUrl = BASE_URL + "?path=presence/qr/generate";
+
+          const response = await fetch(targetUrl, {
+            method: "POST",
+            // Memaksa Simple Request agar terhindar dari Preflight CORS
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+
+          if (result.ok) {
+            const qrToken = result.data.qr_token;
+            statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
+
+            new QRCode(qrContainer, {
+              text: qrToken,
+              width: 200,
+              height: 200,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.H,
+            });
+          } else {
+            statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
+          }
+        } catch (error) {
+          console.error("Error Jaringan/CORS:", error);
+          statusMessage.innerText = "Gagal terhubung ke server. Cek console.";
+        }
       }
     </script>
   </body>
