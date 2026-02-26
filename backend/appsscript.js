@@ -22,8 +22,9 @@ function doGet(e) {
 
   if (path === "presence/status") {
     return handleCheckStatus(e.parameter);
+  } else if (path === "presence/list") {
+    return handleGetPresenceList(e.parameter);
   } else if (path === "ui") {
-    // Render file Index.html langsung dari GAS (Bebas CORS!)
     return HtmlService.createHtmlOutputFromFile("Index")
       .setTitle("Dashboard Presensi QR")
       .addMetaTag("viewport", "width=device-width, initial-scale=1");
@@ -49,6 +50,35 @@ function doPost(e) {
     }
   } catch (error) {
     return sendError("bad_request");
+  }
+}
+
+function handleGetPresenceList(params) {
+  if (!params.course_id || !params.session_id) {
+    return sendError("missing_parameter");
+  }
+
+  try {
+    const presenceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("presence");
+    const data = presenceSheet.getDataRange().getValues();
+    
+    let attendees = [];
+    
+    // Mulai dari index 1 untuk melewati baris Header
+    for (let i = 1; i < data.length; i++) {
+      let row = data[i];
+      // Cek kecocokan course_id dan session_id
+      if (row[3] === params.course_id && row[4] === params.session_id) {
+        attendees.push({
+          user_id: row[1],
+          time: row[7] // Timestamp dari kolom recorded_at
+        });
+      }
+    }
+    
+    return sendSuccess(attendees);
+  } catch (error) {
+    return sendError("database_error");
   }
 }
 

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AttendSense - Portal Mahasiswa (Scanner)</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f7f6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+      .card {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+      }
+      input {
+        width: 90%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      #reader {
+        width: 100%;
+        margin-top: 20px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .info-text {
+        color: #555;
+        font-size: 14px;
+        margin-top: 10px;
+      }
+      .status {
+        margin-top: 15px;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .success { color: #28a745; }
+      .error { color: #dc3545; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Scan QR Presensi</h2>
+      <p class="info-text">Lengkapi data di bawah ini sebelum memindai QR Code.</p>
+
+      <input type="text" id="userId" placeholder="Masukkan NIM (Contoh: 20230001)" required />
+      <input type="text" id="courseId" placeholder="Course ID (Contoh: cloud-101)" value="cloud-101" required />
+      <input type="text" id="sessionId" placeholder="Session ID (Contoh: sesi-02)" value="sesi-02" required />
+
+      <div id="reader"></div>
+      
+      <p id="status-message" class="status info-text"></p>
+    </div>
+
+    <script>
+      const BASE_URL = "https://script.google.com/macros/s/AKfycbwRq4wPHPd2L5aBObz7l6VattTpgtUp82Z8_7Sy8HCWZ003xpvjKcO0fVPnXsAKbZkj/exec";
+      let html5QrcodeScanner = null;
+
+      // Mendapatkan atau membuat Device ID unik untuk simulasi device tracking
+      function getOrCreateDeviceId() {
+        let devId = localStorage.getItem("attendsense_device_id");
+        if (!devId) {
+          devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+          localStorage.setItem("attendsense_device_id", devId);
+        }
+        return devId;
+      }
+
+      // Fungsi utama yang dipanggil saat QR Code berhasil terbaca
+      async function onScanSuccess(decodedText, decodedResult) {
+        const userId = document.getElementById("userId").value.trim();
+        const courseId = document.getElementById("courseId").value.trim();
+        const sessionId = document.getElementById("sessionId").value.trim();
+        const statusMessage = document.getElementById("status-message");
+
+        // Validasi input lokal
+        if (!userId || !courseId || !sessionId) {
+          statusMessage.innerText = "⚠️ Harap isi NIM, Course ID, dan Session ID.";
+          statusMessage.className = "status error";
+          return;
+        }
+
+        // Hentikan scanner sementara agar tidak terjadi multiple request
+        html5QrcodeScanner.clear();
+        statusMessage.innerText = "Memproses Check-in...";
+        statusMessage.className = "status info-text";
+
+        const payload = {
+          user_id: userId,
+          device_id: getOrCreateDeviceId(),
+          course_id: courseId,
+          session_id: sessionId,
+          qr_token: decodedText, // Token hasil scan dari kamera
+          ts: new Date().toISOString()
+        };
+
+        try {
+          const targetUrl = BASE_URL + "?path=presence/checkin";
+          const response = await fetch(targetUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const result = await response.json();
+
+          if (result.ok) {
+            statusMessage.innerText = `✅ Berhasil Check-in!\nID: ${result.data.presence_id}`;
+            statusMessage.className = "status success";
+          } else {
+            statusMessage.innerText = `❌ Gagal: ${result.error}`;
+            statusMessage.className = "status error";
+            restartScannerBtn();
+          }
+        } catch (error) {
+          console.error("Fetch Error:", error);
+          statusMessage.innerText = "❌ Gagal terhubung ke server.";
+          statusMessage.className = "status error";
+          restartScannerBtn();
+        }
+      }
+
+      // Fungsi bantuan untuk me-restart scanner jika terjadi error
+      function restartScannerBtn() {
+        setTimeout(() => {
+            if(confirm("Check-in gagal. Ingin mencoba scan ulang?")) {
+                initializeScanner();
+                document.getElementById("status-message").innerText = "";
+            }
+        }, 1000);
+      }
+
+      function onScanFailure(error) {
+        // Abaikan peringatan ini agar console tidak penuh saat proses mencari QR
+        // console.warn(`Code scan error = ${error}`);
+      }
+
+      function initializeScanner() {
+        html5QrcodeScanner = new Html5QrcodeScanner(
+          "reader",
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          /* verbose= */ false
+        );
+        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+      }
+
+      // Inisialisasi scanner saat halaman dimuat
+      window.onload = () => {
+        initializeScanner();
+      };
+    </script>
+  </body>
+</html>
