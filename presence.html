@@ -49,6 +49,9 @@
         overflow: hidden;
         border-bottom-left-radius: 24px;
         border-bottom-right-radius: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       header::before {
@@ -76,7 +79,6 @@
         z-index: 1;
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 12px;
       }
 
@@ -323,58 +325,51 @@
       }
 
       .back-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 32px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, var(--secondary) 0%, var(--primary-dark) 100%);
+        position: absolute;
+        left: 24px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
         color: white;
         border: none;
-        border-radius: 16px;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
-        font-weight: 600;
-        font-size: 1rem;
-        transition: all 0.4s ease;
-        box-shadow: var(--shadow-md), 0 4px 12px rgba(5, 150, 105, 0.2);
-        position: relative;
-        overflow: hidden;
-      }
-
-      .back-button::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-        transform: scale(0);
-        transition: transform 0.4s ease;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 2;
+        text-decoration: none; /* Hilangkan garis bawah default link */
       }
 
       .back-button:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-lg), 0 6px 16px rgba(5, 150, 105, 0.3);
-      }
-
-      .back-button:hover::before {
-        transform: scale(1);
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
 
       .back-button i {
         font-size: 1.25rem;
+      }
+
+      @media (max-width: 768px) {
+        .back-button {
+          left: 16px;
+        }
       }
     </style>
   </head>
   <body>
 
     <header>
+      <a href="homepage.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
       <h1>QR Presence Dashboard</h1>
     </header>
 
     <div class="container">
-      <a href="homepage.html" class="back-button"><i class="fas fa-arrow-left"></i> Kembali ke Homepage</a>
       <div class="dashboard-grid">
         <div class="card">
           <h2><i class="fas fa-qrcode"></i>1. Portal Dosen (Generate QR)</h2>
