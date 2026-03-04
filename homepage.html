@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AttendSense - Homepage</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+      :root {
+        --primary: #059669;
+        --primary-dark: #047857;
+        --secondary: #0f766e;
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text: #1e293b;
+        --text-light: #64748b;
+        --border: #e2e8f0;
+        --success: #10b981;
+        --error: #ef4444;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, var(--bg) 0%, #f0f4f8 100%);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.5;
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 48px 24px;
+        text-align: center;
+        box-shadow: var(--shadow-lg), 0 20px 40px rgba(5, 150, 105, 0.15);
+        position: relative;
+        overflow: hidden;
+        border-bottom-left-radius: 32px;
+        border-bottom-right-radius: 32px;
+      }
+
+      header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: pulse 8s infinite;
+      }
+
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+      }
+
+      header h1::before {
+        content: '\f274';
+        font-family: "Font Awesome 6 Free";
+        font-weight: 900;
+        font-size: 2rem;
+        opacity: 0.9;
+        animation: iconPulse 2s infinite;
+      }
+
+      @keyframes iconPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+      }
+
+      .container {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 64px 24px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 48px 16px;
+        }
+        
+        header h1 {
+          font-size: 2rem;
+        }
+      }
+
+      #homepage {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 40px;
+      }
+
+      .feature-card {
+        background: var(--card-bg);
+        padding: 40px 32px;
+        border-radius: 32px;
+        box-shadow: var(--shadow-md);
+        text-align: center;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        color: var(--text); /* Pastikan warna teks default hitam */
+      }
+
+      .feature-card a {
+        color: inherit; /* Buat link di dalam card warna sama dengan parent (hitam) */
+        text-decoration: none;
+      }
+
+      .feature-card:hover a {
+        color: var(--primary); /* Opsional: Ubah warna saat hover untuk efek keren */
+      }
+
+      .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 6px;
+        background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
+        transform: scaleX(0);
+        transition: transform 0.4s ease;
+      }
+
+      .feature-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-8px);
+      }
+
+      .feature-card:hover::before {
+        transform: scaleX(1);
+      }
+
+      .feature-card i {
+        font-size: 4rem;
+        color: var(--primary);
+        margin-bottom: 24px;
+        display: block;
+        transition: transform 0.3s ease;
+      }
+
+      .feature-card:hover i {
+        transform: rotate(10deg) scale(1.1);
+      }
+
+      .feature-card h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .feature-card p {
+        color: var(--text-light);
+        font-size: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+
+    <header>
+      <h1>AttendSense Dashboard</h1>
+    </header>
+
+    <div class="container">
+      <div id="homepage">
+        <a href="presence.html" class="feature-card" style="text-decoration: none;">
+          <i class="fas fa-qrcode"></i>
+          <h3>QR Presence</h3>
+          <p>Absensi menggunakan QR Code untuk dosen dan mahasiswa.</p>
+        </a>
+        <div class="feature-card" onclick="alert('Fitur sedang dalam pengembangan.');">
+          <i class="fas fa-mobile-alt"></i>
+          <h3>Accelerometer</h3>
+          <p>Fitur absensi berbasis sensor accelerometer (Coming soon).</p>
+        </div>
+        <div class="feature-card" onclick="alert('Fitur sedang dalam pengembangan.');">
+          <i class="fas fa-map-marker-alt"></i>
+          <h3>GPS</h3>
+          <p>Fitur absensi berbasis lokasi GPS (Coming soon).</p>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>
