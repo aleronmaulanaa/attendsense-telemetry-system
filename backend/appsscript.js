@@ -1,6 +1,3 @@
-// ==========================================
-// STEP 5: Standardisasi Format Response
-// ==========================================
 function sendSuccess(data) {
   return ContentService.createTextOutput(
     JSON.stringify({ ok: true, data }),
@@ -13,9 +10,6 @@ function sendError(error) {
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
-// ==========================================
-// STEP 1 & 8: Router GET & UI Frontend
-// ==========================================
 function doGet(e) {
   // Gunakan parameter ?path= (Default ke UI)
   const path = e.parameter && e.parameter.path ? e.parameter.path : "ui";
@@ -105,18 +99,23 @@ function processGenerateQR(payload) {
   try {
     const token = "TKN-" + Utilities.getUuid().substring(0, 6).toUpperCase();
     const requestTime = new Date(payload.ts);
-    const expiresTime = new Date(requestTime.getTime() + 120000); // TTL 120 detik
+    
+    // REVISI: Ubah TTL menjadi 25 detik + 5 detik toleransi jaringan = 30000 ms
+    const expiresTime = new Date(requestTime.getTime() + 30000); 
 
-    const sheet =
-      SpreadsheetApp.getActiveSpreadsheet().getSheetByName("tokens");
-    // Header: qr_token, course_id, session_id, created_at, expires_at, used
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("tokens");
+    
+    // Menangkap batas kapasitas dari frontend (default 50 jika kosong)
+    const maxCapacity = payload.max_capacity || 50; 
+
+    // Header: qr_token | course_id | session_id | created_at | expires_at | max_capacity
     sheet.appendRow([
       token,
       payload.course_id,
       payload.session_id,
       requestTime.toISOString(),
       expiresTime.toISOString(),
-      false,
+      maxCapacity,
     ]);
 
     return {
@@ -129,14 +128,7 @@ function processGenerateQR(payload) {
 }
 
 function handleCheckIn(body) {
-  if (
-    !body.user_id ||
-    !body.device_id ||
-    !body.course_id ||
-    !body.session_id ||
-    !body.qr_token ||
-    !body.ts
-  ) {
+  if (!body.user_id || !body.device_id || !body.course_id || !body.session_id || !body.qr_token || !body.ts) {
     return sendError("missing_field");
   }
 
@@ -145,51 +137,63 @@ function handleCheckIn(body) {
     const tokenSheet = ss.getSheetByName("tokens");
     const tokenData = tokenSheet.getDataRange().getValues();
 
-    let tokenRowIndex = -1;
     let isValidToken = false;
     let isExpired = false;
-    let isUsed = false;
+    let maxCapacity = 0; 
 
+    // 1. Validasi Token
     for (let i = 1; i < tokenData.length; i++) {
       let row = tokenData[i];
-      if (
-        row[0] === body.qr_token &&
-        row[1] === body.course_id &&
-        row[2] === body.session_id
-      ) {
+      if (row[0] === body.qr_token && row[1] === body.course_id && row[2] === body.session_id) {
         isValidToken = true;
-        tokenRowIndex = i + 1; // +1 karena index array vs baris sheet
-
+        maxCapacity = Number(row[5]); // Mengambil batas kelas dari kolom ke-6
         const expiresAt = new Date(row[4]);
         const scanTime = new Date(body.ts);
-
         if (scanTime > expiresAt) isExpired = true;
-        if (row[5] === true) isUsed = true; // Cek status used
         break;
       }
     }
 
     if (!isValidToken) return sendError("token_invalid");
     if (isExpired) return sendError("token_expired");
-    if (isUsed) return sendError("token_already_used");
 
-    // Tandai token menjadi used = true
-    tokenSheet.getRange(tokenRowIndex, 6).setValue(true);
-
-    // Simpan ke sheet presence
+    // 2. Cek Duplikasi Mahasiswa & Hitung Kapasitas di Sheet Presence
     const presenceSheet = ss.getSheetByName("presence");
-    const presenceId =
-      "PR-" + Utilities.getUuid().substring(0, 6).toUpperCase();
+    const presenceData = presenceSheet.getDataRange().getValues();
+    let currentAttendees = 0;
 
+    for (let j = 1; j < presenceData.length; j++) {
+      let pRow = presenceData[j];
+      
+      // PERBAIKAN: Paksa semua menjadi String agar pencocokan tidak meleset
+      let sheetCourse = String(pRow[3]);
+      let sheetSession = String(pRow[4]);
+      let sheetNim = String(pRow[1]);
+      
+      let inputCourse = String(body.course_id);
+      let inputSession = String(body.session_id);
+      let inputNim = String(body.user_id);
+
+      // Cek apakah ini sesi kelas yang sama
+      if (sheetCourse === inputCourse && sheetSession === inputSession) {
+        // Jika NIM mahasiswa sudah ada di sesi ini, tolak
+        if (sheetNim === inputNim) {
+          return sendError("already_checked_in"); 
+        }
+        currentAttendees++; // Hitung jumlah mahasiswa yang sudah absen
+      }
+    }
+
+    // 3. Blokir jika kuota kelas sudah penuh
+    if (currentAttendees >= maxCapacity) {
+      return sendError("session_limit_reached");
+    }
+
+    // 4. Jika lulus semua ujian, simpan presensi
+    const presenceId = "PR-" + Utilities.getUuid().substring(0, 6).toUpperCase();
     presenceSheet.appendRow([
-      presenceId,
-      body.user_id,
-      body.device_id,
-      body.course_id,
-      body.session_id,
-      body.qr_token,
-      body.ts,
-      new Date().toISOString(),
+      presenceId, body.user_id, body.device_id, body.course_id,
+      body.session_id, body.qr_token, body.ts, new Date().toISOString(),
     ]);
 
     return sendSuccess({ presence_id: presenceId, status: "checked_in" });
