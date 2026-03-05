@@ -3,209 +3,182 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AttendSense - Portal Dosen</title>
+    <title>Portal Dosen - AttendSense</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f4f7f6;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px;
+      :root {
+        --primary: #059669; --primary-dark: #047857; --secondary: #0f766e;
+        --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b;
+        --border: #e2e8f0; --success: #10b981; --error: #ef4444;
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
       }
-      .card {
-        background: white;
-        padding: 24px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
-      }
-      input {
-        width: 90%;
-        padding: 10px;
-        margin: 10px 0;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-      button {
-        width: 100%;
-        padding: 12px;
-        background-color: #0056b3;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-      }
-      button:hover {
-        background-color: #004494;
-      }
-      #qr-container {
-        margin-top: 24px;
-        display: flex;
-        justify-content: center;
-        padding: 16px;
-        background: #fff;
-      }
-      .info-text {
-        color: #555;
-        font-size: 14px;
-        margin-top: 10px;
-      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: "Inter", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #f0f4f8 100%); color: var(--text); min-height: 100vh; line-height: 1.5; }
+      header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 32px 24px; text-align: center; box-shadow: var(--shadow-lg), 0 20px 40px rgba(5, 150, 105, 0.15); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
+      header h1 { font-size: 2rem; font-weight: 700; }
+      .container { max-width: 1000px; margin: 0 auto; padding: 48px 24px; }
+      .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; }
+      @media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+      .card { background: var(--card-bg); padding: 32px; border-radius: 24px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); }
+      .card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+      .card h2 i { color: var(--primary); font-size: 1.25rem; }
+      input { width: 100%; padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; }
+      input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1); }
+      button { width: 100%; padding: 14px 16px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; }
+      button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+      button:disabled { background: var(--border); color: var(--text-light); cursor: not-allowed; }
+      .btn-danger { background: linear-gradient(135deg, var(--error) 0%, #b91c1c 100%); margin-top: 10px; }
+      .status-text { font-size: 0.875rem; margin-top: 12px; text-align: center; min-height: 24px; font-weight: 500; padding: 8px 12px; border-radius: 8px; }
+      .success { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+      .error { color: var(--error); background: rgba(239, 68, 68, 0.1); }
+      #qr-container { display: flex; justify-content: center; margin-top: 24px; padding: 16px; background: #f8fafc; border-radius: 16px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); }
+      .attendee-list { list-style: none; padding: 0; margin: 24px 0 0 0; max-height: 400px; overflow-y: auto; border-top: 1px solid var(--border); }
+      .attendee-item { padding: 16px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; }
+      .attendee-item strong { color: var(--text); font-weight: 600; flex: 1; }
+      .attendee-item span { color: var(--text-light); font-size: 0.875rem; background: rgba(0, 0, 0, 0.05); padding: 4px 8px; border-radius: 6px; }
     </style>
   </head>
   <body>
-    <div class="card">
-      <h2>Generate QR Presensi</h2>
-      <p class="info-text">
-        Masukkan detail sesi kuliah untuk membuat QR Code.
-      </p>
+    <header>
+      <h1>Portal Dosen - AttendSense</h1>
+    </header>
 
-      <input
-        type="text"
-        id="courseId"
-        placeholder="Contoh: cloud-101"
-        value="cloud-101"
-      />
-      <input
-        type="text"
-        id="sessionId"
-        placeholder="Contoh: sesi-02"
-        value="sesi-02"
-      />
+    <div class="container">
+      <div class="dashboard-grid">
+        <div class="card">
+          <h2><i class="fas fa-qrcode"></i>Generate QR Sesi</h2>
+          <input type="text" id="genCourseId" placeholder="Course ID (Contoh: cloud-101)" value="cloud-101" />
+          <input type="text" id="genSessionId" placeholder="Session ID (Contoh: sesi-02)" value="sesi-02" />
+          <input type="number" id="genMaxCapacity" placeholder="Batas Kapasitas Kelas" value="40" min="1" />
+          <button id="btnGenerate" onclick="startAutoGenerate()">Mulai Sesi (Auto-Refresh 25s)</button>
+          <button id="btnStop" class="btn-danger" onclick="stopAutoGenerate()" style="display: none">Hentikan Sesi</button>
+          <div id="qr-container"></div>
+          <p id="genStatus" class="status-text"></p>
+        </div>
 
-      <button onclick="generateQR()">Buat QR Code</button>
-
-      <div id="qr-container"></div>
-      <p id="status-message" class="info-text"></p>
+        <div class="card">
+          <h2><i class="fas fa-list-ul"></i>Data Kehadiran</h2>
+          <input type="text" id="listCourseId" placeholder="Course ID" value="cloud-101" />
+          <input type="text" id="listSessionId" placeholder="Session ID" value="sesi-02" />
+          <button onclick="fetchAttendanceList()">Refresh Data</button>
+          <ul id="attendeeList" class="attendee-list">
+            <li class="status-text">Klik Refresh untuk melihat data.</li>
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <!-- <script>
-      const BASE_URL =
-        "https://script.google.com/macros/s/AKfycbwRq4wPHPd2L5aBObz7l6VattTpgtUp82Z8_7Sy8HCWZ003xpvjKcO0fVPnXsAKbZkj/exec?path=ui";
-
-      function generateQR() {
-        const courseId = document.getElementById("courseId").value;
-        const sessionId = document.getElementById("sessionId").value;
-        const statusMessage = document.getElementById("status-message");
-        const qrContainer = document.getElementById("qr-container");
-
-        qrContainer.innerHTML = "";
-        statusMessage.innerText = "Meminta token dari server...";
-
-        const payload = {
-          course_id: courseId,
-          session_id: sessionId,
-          ts: new Date().toISOString(),
-        };
-
-        const targetUrl = BASE_URL + "/presence/qr/generate";
-
-        // Menggunakan XMLHttpRequest sebagai ganti fetch API untuk bypass CORS GAS
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", targetUrl, true);
-
-        // Memaksa browser mengirim Simple Request
-        xhr.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
-
-        xhr.onload = function () {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const result = JSON.parse(xhr.responseText);
-
-              if (result.ok) {
-                const qrToken = result.data.qr_token;
-                statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
-
-                new QRCode(qrContainer, {
-                  text: qrToken,
-                  width: 200,
-                  height: 200,
-                  colorDark: "#000000",
-                  colorLight: "#ffffff",
-                  correctLevel: QRCode.CorrectLevel.H,
-                });
-              } else {
-                statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
-              }
-            } catch (e) {
-              statusMessage.innerText =
-                "Gagal membaca data balasan dari server.";
-              console.error("Parse error:", e);
-            }
-          } else {
-            statusMessage.innerText = `Error Server: Status ${xhr.status}`;
-          }
-        };
-
-        xhr.onerror = function () {
-          statusMessage.innerText =
-            "Gagal terhubung ke server (CORS/Jaringan).";
-        };
-
-        // Mengirim data berupa string JSON sesuai kontrak
-        xhr.send(JSON.stringify(payload));
-      }
-    </script> -->
     <script>
-      // 1. Masukkan URL Web App GAS-mu yang baru (yang berakhiran /exec)
-      const BASE_URL =
-        "https://script.google.com/macros/s/AKfycbwRq4wPHPd2L5aBObz7l6VattTpgtUp82Z8_7Sy8HCWZ003xpvjKcO0fVPnXsAKbZkj/exec";
+      const BASE_URL = "https://script.google.com/macros/s/AKfycbwpXGxBBT8gE11OSskATkK2INTdk06XSULJ5g4LwV_UOfTPI88q5WKXyji3dbMbDM-0/exec";
+      let qrIntervalId = null;
+
+      function startAutoGenerate() {
+        const courseId = document.getElementById("genCourseId").value.trim();
+        const sessionId = document.getElementById("genSessionId").value.trim();
+        const maxCap = document.getElementById("genMaxCapacity").value.trim();
+
+        if (!courseId || !sessionId || !maxCap) return alert("Course ID, Session ID, dan Batas Kapasitas wajib diisi.");
+
+        document.getElementById("genCourseId").disabled = true;
+        document.getElementById("genSessionId").disabled = true;
+        document.getElementById("genMaxCapacity").disabled = true;
+        document.getElementById("btnGenerate").innerText = "Sesi Berjalan (Ganti tiap 25s)...";
+        document.getElementById("btnGenerate").disabled = true;
+        document.getElementById("btnStop").style.display = "block";
+
+        generateQR();
+        qrIntervalId = setInterval(generateQR, 25000);
+      }
+
+      function stopAutoGenerate() {
+        clearInterval(qrIntervalId);
+        qrIntervalId = null;
+
+        document.getElementById("genCourseId").disabled = false;
+        document.getElementById("genSessionId").disabled = false;
+        document.getElementById("genMaxCapacity").disabled = false;
+        document.getElementById("btnGenerate").innerText = "Mulai Sesi (Auto-Refresh 25s)";
+        document.getElementById("btnGenerate").disabled = false;
+        document.getElementById("btnStop").style.display = "none";
+        document.getElementById("genStatus").innerText = "Sesi dihentikan.";
+        document.getElementById("genStatus").className = "status-text error";
+        document.getElementById("qr-container").innerHTML = "";
+      }
 
       async function generateQR() {
-        const courseId = document.getElementById("courseId").value;
-        const sessionId = document.getElementById("sessionId").value;
-        const statusMessage = document.getElementById("status-message");
+        const courseId = document.getElementById("genCourseId").value.trim();
+        const sessionId = document.getElementById("genSessionId").value.trim();
+        const maxCap = document.getElementById("genMaxCapacity").value.trim();
+        const statusEl = document.getElementById("genStatus");
         const qrContainer = document.getElementById("qr-container");
 
         qrContainer.innerHTML = "";
-        statusMessage.innerText = "Meminta token dari server...";
+        statusEl.innerText = "Merefresh token...";
+        statusEl.className = "status-text";
 
         const payload = {
-          course_id: courseId,
-          session_id: sessionId,
-          ts: new Date().toISOString(),
+          course_id: courseId, session_id: sessionId,
+          max_capacity: parseInt(maxCap), ts: new Date().toISOString(),
         };
 
         try {
-          // 2. PERHATIKAN PERUBAHAN DI SINI: Kita menggunakan "?path="
-          const targetUrl = BASE_URL + "?path=presence/qr/generate";
-
-          const response = await fetch(targetUrl, {
-            method: "POST",
-            // Memaksa Simple Request agar terhindar dari Preflight CORS
-            headers: {
-              "Content-Type": "text/plain;charset=utf-8",
-            },
+          const response = await fetch(`${BASE_URL}?path=presence/qr/generate`, {
+            method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload),
           });
+          const result = await response.json();
+          if (result.ok) {
+            statusEl.innerText = `Token: ${result.data.qr_token}\n(Berlaku 25s, Kuota: ${maxCap})`;
+            statusEl.className = "status-text success";
+            new QRCode(qrContainer, { text: result.data.qr_token, width: 200, height: 200 });
+            
+            // Auto update & fetch list
+            document.getElementById("listCourseId").value = courseId;
+            document.getElementById("listSessionId").value = sessionId;
+            fetchAttendanceList();
+          } else {
+            statusEl.innerText = `Gagal: ${result.error}`;
+            statusEl.className = "status-text error";
+          }
+        } catch (error) {
+          statusEl.innerText = "Error Jaringan. Retrying...";
+          statusEl.className = "status-text error";
+        }
+      }
 
+      async function fetchAttendanceList() {
+        const courseId = document.getElementById("listCourseId").value.trim();
+        const sessionId = document.getElementById("listSessionId").value.trim();
+        const listEl = document.getElementById("attendeeList");
+
+        if (listEl.innerHTML.includes("Mengambil data")) return;
+
+        try {
+          const response = await fetch(`${BASE_URL}?path=presence/list&course_id=${courseId}&session_id=${sessionId}`);
           const result = await response.json();
 
           if (result.ok) {
-            const qrToken = result.data.qr_token;
-            statusMessage.innerText = `Berhasil! Token: ${qrToken}`;
-
-            new QRCode(qrContainer, {
-              text: qrToken,
-              width: 200,
-              height: 200,
-              colorDark: "#000000",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.H,
+            if (result.data.length === 0) {
+              listEl.innerHTML = `<li class="status-text">Belum ada yang hadir.</li>`;
+              return;
+            }
+            listEl.innerHTML = "";
+            const sortedData = result.data.sort((a, b) => new Date(b.time) - new Date(a.time));
+            sortedData.forEach((item) => {
+              const dateObj = new Date(item.time);
+              const timeStr = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+              listEl.innerHTML += `<li class="attendee-item"><strong>${item.user_id}</strong><span>${timeStr}</span></li>`;
             });
-          } else {
-            statusMessage.innerText = `Gagal dari Backend: ${result.error}`;
           }
         } catch (error) {
-          console.error("Error Jaringan/CORS:", error);
-          statusMessage.innerText = "Gagal terhubung ke server. Cek console.";
+          console.error("List Error");
         }
       }
+
+      window.onload = fetchAttendanceList;
     </script>
   </body>
 </html>
