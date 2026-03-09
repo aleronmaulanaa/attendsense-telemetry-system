@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AttendSense - Accelerometer Telemetry</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  
+  <style>
+    :root { --primary: #0284c7; --primary-dark: #0369a1; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; --warning: #f59e0b; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Inter", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #e0f2fe 100%); color: var(--text); min-height: 100vh; }
+    
+    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px; text-align: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.2); position: relative; }
+    .back-button { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: 0.3s; }
+    .back-button:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+    
+    .container { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid var(--border); }
+    .card h2 { font-size: 1.25rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--primary-dark); }
+    
+    .sensor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; text-align: center; }
+    .sensor-box { background: #f1f5f9; padding: 12px; border-radius: 12px; border: 1px solid var(--border); }
+    .sensor-box span { font-size: 0.8rem; color: var(--text-light); font-weight: 600; }
+    .sensor-box h3 { font-size: 1.5rem; margin-top: 4px; font-family: monospace; }
+    .x-val { color: #ef4444; } .y-val { color: #10b981; } .z-val { color: #3b82f6; }
+
+    input, button { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; margin-bottom: 12px; }
+    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2); }
+    button:hover { background: var(--primary-dark); transform: translateY(-2px); }
+    .btn-danger { background: var(--error); box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2); }
+    .btn-danger:hover { background: #b91c1c; }
+    
+    #chart { min-height: 300px; margin-top: 16px; }
+    .log-box { background: #1e293b; color: #10b981; font-family: monospace; padding: 12px; border-radius: 10px; font-size: 0.85rem; height: 120px; overflow-y: auto; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
+    <h1><i class="fas fa-satellite-dish"></i> Telemetri Sensor</h1>
+    <p style="font-size: 0.9rem; margin-top: 4px; opacity: 0.8;">Modul 2: Accelerometer Test</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2><i class="fas fa-mobile-alt"></i> Status Perangkat</h2>
+      <input type="text" id="deviceId" placeholder="Device ID" readonly />
+      
+      <div class="sensor-grid">
+        <div class="sensor-box"><span class="x-val">Sumbu X (Kiri/Kanan)</span><h3 id="valX" class="x-val">0.00</h3></div>
+        <div class="sensor-box"><span class="y-val">Sumbu Y (Atas/Bawah)</span><h3 id="valY" class="y-val">0.00</h3></div>
+        <div class="sensor-box"><span class="z-val">Sumbu Z (Depan/Blkng)</span><h3 id="valZ" class="z-val">0.00</h3></div>
+      </div>
+
+      <button id="btnStart" onclick="startSensor()"><i class="fas fa-play"></i> Mulai Rekam & Kirim Batch</button>
+      <button id="btnStop" class="btn-danger" onclick="stopSensor()" style="display: none;"><i class="fas fa-stop"></i> Hentikan Sensor</button>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-chart-line"></i> Grafik Real-Time</h2>
+      <div id="chart"></div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-server"></i> Log Server (Backend GAS)</h2>
+      <button onclick="fetchLatestData()" style="background: var(--warning); color: #000;"><i class="fas fa-download"></i> Cek Data Terbaru (GET Latest)</button>
+      <div id="serverLog" class="log-box">Menunggu instruksi...</div>
+    </div>
+  </div>
+
+  <script>
+    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbyDBQvFuxHJ1QThc9Upe2wG5oLJJ7DT2rcvoqPX-FSVp9i6Jtq4DseuMW-gb1U4fxN8/exec";
+    
+    // Variabel Global
+    let isRecording = false;
+    let batchData = [];
+    let batchIntervalId = null;
+    let chart;
+    let dataX = [], dataY = [], dataZ = [];
+    const MAX_DATA_POINTS = 40; // Menjaga agar grafik tetap ringan
+
+    // Generate Device ID Unik
+    function getDeviceId() {
+      let devId = localStorage.getItem("attendsense_device_id");
+      if (!devId) {
+        devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+        localStorage.setItem("attendsense_device_id", devId);
+      }
+      return devId;
+    }
+    document.getElementById("deviceId").value = getDeviceId();
+
+    // Fungsi Logger
+    function logMessage(msg) {
+      const logBox = document.getElementById("serverLog");
+      const time = new Date().toLocaleTimeString('id-ID');
+      logBox.innerHTML = `[${time}] ${msg}<br>` + logBox.innerHTML;
+    }
+
+    // Inisialisasi Grafik ApexCharts
+    function initChart() {
+      var options = {
+        series: [
+          { name: 'Sumbu X', data: dataX.slice() },
+          { name: 'Sumbu Y', data: dataY.slice() },
+          { name: 'Sumbu Z', data: dataZ.slice() }
+        ],
+        chart: {
+          id: 'realtime', height: 300, type: 'line',
+          animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 200 } },
+          toolbar: { show: false }, zoom: { enabled: false }
+        },
+        colors: ['#ef4444', '#10b981', '#3b82f6'],
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 3 },
+        xaxis: { type: 'datetime', range: 8000 }, // Rentang 8 detik
+        yaxis: { max: 15, min: -15, tickAmount: 6 }, // Range gravitasi max ~9.8
+        legend: { show: true, position: 'top' }
+      };
+
+      chart = new ApexCharts(document.querySelector("#chart"), options);
+      chart.render();
+    }
+
+    // Menangkap Gerakan HP
+    function handleMotion(event) {
+      if (!isRecording) return;
+
+      // Ambil data akselerasi (termasuk gravitasi)
+      let acc = event.accelerationIncludingGravity;
+      if (!acc || acc.x === null) return;
+
+      let x = parseFloat(acc.x.toFixed(2));
+      let y = parseFloat(acc.y.toFixed(2));
+      let z = parseFloat(acc.z.toFixed(2));
+      let now = new Date().getTime();
+
+      // Update Teks di UI
+      document.getElementById("valX").innerText = x;
+      document.getElementById("valY").innerText = y;
+      document.getElementById("valZ").innerText = z;
+
+      // Masukkan ke array Grafik
+      dataX.push([now, x]);
+      dataY.push([now, y]);
+      dataZ.push([now, z]);
+
+      // Buang data lama agar memori tidak penuh
+      if (dataX.length > MAX_DATA_POINTS) {
+        dataX.shift(); dataY.shift(); dataZ.shift();
+      }
+
+      // Render Grafik secara halus
+      chart.updateSeries([{ data: dataX }, { data: dataY }, { data: dataZ }]);
+
+      // Simpan ke array Batch untuk dikirim ke Backend
+      batchData.push({ t: new Date(now).toISOString(), x: x, y: y, z: z });
+    }
+
+    // Mengirim Batch ke Backend
+    async function sendBatchToServer() {
+      if (batchData.length === 0) return;
+
+      // Kunci data saat ini, lalu kosongkan keranjang untuk siklus berikutnya
+      const payloadSamples = [...batchData]; 
+      batchData = []; 
+
+      const payload = {
+        device_id: getDeviceId(),
+        ts: new Date().toISOString(),
+        samples: payloadSamples
+      };
+
+      try {
+        logMessage(`Mengirim batch (${payloadSamples.length} titik) ke GAS...`);
+        const response = await fetch(`${BASE_URL}?path=telemetry/accel`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        
+        if (result.ok) {
+          logMessage(`SUKSES: Server mencatat ${result.data.accepted} baris.`);
+        } else {
+          logMessage(`ERROR: ${result.error}`);
+        }
+      } catch (error) {
+        logMessage(`GAGAL: Terputus dari server.`);
+      }
+    }
+
+    // Uji Rute GET Latest
+    async function fetchLatestData() {
+      const devId = getDeviceId();
+      logMessage(`Meminta data terakhir untuk ${devId}...`);
+      
+      try {
+        const response = await fetch(`${BASE_URL}?path=telemetry/accel/latest&device_id=${devId}`);
+        const result = await response.json();
+        
+        if(result.ok) {
+          const t = new Date(result.data.t).toLocaleTimeString('id-ID');
+          logMessage(`LATEST SERVER: X=${result.data.x}, Y=${result.data.y}, Z=${result.data.z} (${t})`);
+        } else {
+          logMessage(`SERVER BALAS: ${result.error}`);
+        }
+      } catch (e) {
+        logMessage(`GAGAL: Tidak dapat mengambil data.`);
+      }
+    }
+
+    // Kontrol Sensor
+    function startSensor() {
+      // Meminta izin sensor khusus pengguna iOS (iPhone)
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              mulaiPerekaman();
+            } else {
+              alert("Izin sensor ditolak!");
+            }
+          }).catch(console.error);
+      } else {
+        mulaiPerekaman(); // Android / Laptop
+      }
+    }
+
+    function mulaiPerekaman() {
+      isRecording = true;
+      document.getElementById("btnStart").style.display = "none";
+      document.getElementById("btnStop").style.display = "block";
+      logMessage("Sensor Accelerometer aktif.");
+
+      window.addEventListener('devicemotion', handleMotion);
+
+      // Kirim data ke GAS setiap 3 detik agar tidak membebani server
+      batchIntervalId = setInterval(sendBatchToServer, 3000);
+    }
+
+    function stopSensor() {
+      isRecording = false;
+      document.getElementById("btnStart").style.display = "block";
+      document.getElementById("btnStop").style.display = "none";
+      
+      window.removeEventListener('devicemotion', handleMotion);
+      clearInterval(batchIntervalId);
+      
+      // Kirim sisa data yang belum terkirim
+      sendBatchToServer();
+      logMessage("Sensor dihentikan.");
+    }
+
+    window.onload = () => {
+      initChart();
+    };
+  </script>
+</body>
+</html>
