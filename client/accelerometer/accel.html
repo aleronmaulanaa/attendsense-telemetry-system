@@ -34,8 +34,12 @@
     .btn-danger { background: var(--error); box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2); }
     .btn-danger:hover { background: #b91c1c; }
     
-    #chart { min-height: 300px; margin-top: 16px; }
-    .log-box { background: #1e293b; color: #10b981; font-family: monospace; padding: 12px; border-radius: 10px; font-size: 0.85rem; height: 120px; overflow-y: auto; line-height: 1.4; }
+    #chart, #latestChart { min-height: 250px; margin-top: 16px; }
+    
+    /* Log Box dibuat gaya biasa / bersih */
+    .log-box { background: #f8fafc; color: var(--text); padding: 12px; border-radius: 10px; font-size: 0.9rem; height: 120px; overflow-y: auto; line-height: 1.6; border: 1px solid var(--border); }
+    .log-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; }
+    .log-time { color: var(--text-light); font-size: 0.8rem; margin-right: 8px; }
   </style>
 </head>
 <body>
@@ -67,9 +71,16 @@
     </div>
 
     <div class="card">
-      <h2><i class="fas fa-server"></i> Log Server (Backend GAS)</h2>
-      <button onclick="fetchLatestData()" style="background: var(--warning); color: #000;"><i class="fas fa-download"></i> Cek Data Terbaru (GET Latest)</button>
-      <div id="serverLog" class="log-box">Menunggu instruksi...</div>
+      <h2><i class="fas fa-list"></i> Riwayat Aktivitas</h2>
+      <div id="serverLog" class="log-box">
+        <div class="log-item">Menunggu instruksi...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-cloud-download-alt"></i> Tarik Data Server (GET Latest)</h2>
+      <button onclick="fetchLatestData()" style="background: var(--warning); color: #000;"><i class="fas fa-sync-alt"></i> Cek Data Terbaru</button>
+      <div id="latestChart"></div>
     </div>
   </div>
 
@@ -81,11 +92,14 @@
     let isRecording = false;
     let batchData = [];
     let batchIntervalId = null;
-    let chart;
+    let lastCaptureTime = 0; // Untuk Pengereman (Throttling)
+    
+    let realtimeChart;
+    let latestChart;
     let dataX = [], dataY = [], dataZ = [];
-    const MAX_DATA_POINTS = 40; // Menjaga agar grafik tetap ringan
+    const MAX_DATA_POINTS = 30; 
 
-    // Generate Device ID Unik
+    // Generate Device ID
     function getDeviceId() {
       let devId = localStorage.getItem("attendsense_device_id");
       if (!devId) {
@@ -96,15 +110,20 @@
     }
     document.getElementById("deviceId").value = getDeviceId();
 
-    // Fungsi Logger
+    // Fungsi Logger Bersih
     function logMessage(msg) {
       const logBox = document.getElementById("serverLog");
       const time = new Date().toLocaleTimeString('id-ID');
-      logBox.innerHTML = `[${time}] ${msg}<br>` + logBox.innerHTML;
+      
+      // Hapus tulisan 'Menunggu instruksi...' jika ada
+      if(logBox.innerHTML.includes("Menunggu instruksi")) logBox.innerHTML = "";
+      
+      const newLog = `<div class="log-item"><span class="log-time">[${time}]</span> ${msg}</div>`;
+      logBox.innerHTML = newLog + logBox.innerHTML;
     }
 
-    // Inisialisasi Grafik ApexCharts
-    function initChart() {
+    // 1. Inisialisasi Grafik Realtime
+    function initRealtimeChart() {
       var options = {
         series: [
           { name: 'Sumbu X', data: dataX.slice() },
@@ -112,54 +131,70 @@
           { name: 'Sumbu Z', data: dataZ.slice() }
         ],
         chart: {
-          id: 'realtime', height: 300, type: 'line',
+          id: 'realtime', height: 250, type: 'line',
           animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 200 } },
           toolbar: { show: false }, zoom: { enabled: false }
         },
         colors: ['#ef4444', '#10b981', '#3b82f6'],
         dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 3 },
-        xaxis: { type: 'datetime', range: 8000 }, // Rentang 8 detik
-        yaxis: { max: 15, min: -15, tickAmount: 6 }, // Range gravitasi max ~9.8
+        xaxis: { type: 'datetime', range: 5000 }, // 5 Detik visual
+        yaxis: { max: 15, min: -15, tickAmount: 6 },
         legend: { show: true, position: 'top' }
       };
 
-      chart = new ApexCharts(document.querySelector("#chart"), options);
-      chart.render();
+      realtimeChart = new ApexCharts(document.querySelector("#chart"), options);
+      realtimeChart.render();
     }
 
-    // Menangkap Gerakan HP
+    // 2. Inisialisasi Grafik Batang untuk Latest Data
+    function initLatestChart() {
+      var options = {
+        series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
+        chart: { type: 'bar', height: 250, toolbar: { show: false } },
+        colors: ['#0284c7'],
+        plotOptions: { bar: { borderRadius: 4, horizontal: false, distributed: true } },
+        dataLabels: { enabled: true },
+        xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] },
+        yaxis: { max: 15, min: -15 }
+      };
+
+      latestChart = new ApexCharts(document.querySelector("#latestChart"), options);
+      latestChart.render();
+    }
+
+    // Menangkap Gerakan HP (Dengan Rem / Throttle)
     function handleMotion(event) {
       if (!isRecording) return;
 
-      // Ambil data akselerasi (termasuk gravitasi)
+      let now = new Date().getTime();
+      
+      // REM: Cukup ambil data tiap 200ms (5 kali per detik). Mencegah HP Hang!
+      if (now - lastCaptureTime < 200) return;
+      lastCaptureTime = now;
+
       let acc = event.accelerationIncludingGravity;
       if (!acc || acc.x === null) return;
 
       let x = parseFloat(acc.x.toFixed(2));
       let y = parseFloat(acc.y.toFixed(2));
       let z = parseFloat(acc.z.toFixed(2));
-      let now = new Date().getTime();
 
-      // Update Teks di UI
       document.getElementById("valX").innerText = x;
       document.getElementById("valY").innerText = y;
       document.getElementById("valZ").innerText = z;
 
-      // Masukkan ke array Grafik
       dataX.push([now, x]);
       dataY.push([now, y]);
       dataZ.push([now, z]);
 
-      // Buang data lama agar memori tidak penuh
       if (dataX.length > MAX_DATA_POINTS) {
         dataX.shift(); dataY.shift(); dataZ.shift();
       }
 
-      // Render Grafik secara halus
-      chart.updateSeries([{ data: dataX }, { data: dataY }, { data: dataZ }]);
+      // Update Grafik Realtime
+      realtimeChart.updateSeries([{ data: dataX }, { data: dataY }, { data: dataZ }]);
 
-      // Simpan ke array Batch untuk dikirim ke Backend
       batchData.push({ t: new Date(now).toISOString(), x: x, y: y, z: z });
     }
 
@@ -167,7 +202,6 @@
     async function sendBatchToServer() {
       if (batchData.length === 0) return;
 
-      // Kunci data saat ini, lalu kosongkan keranjang untuk siklus berikutnya
       const payloadSamples = [...batchData]; 
       batchData = []; 
 
@@ -178,7 +212,7 @@
       };
 
       try {
-        logMessage(`Mengirim batch (${payloadSamples.length} titik) ke GAS...`);
+        logMessage(`Mengirim batch (${payloadSamples.length} sampel)...`);
         const response = await fetch(`${BASE_URL}?path=telemetry/accel`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -187,19 +221,19 @@
         const result = await response.json();
         
         if (result.ok) {
-          logMessage(`SUKSES: Server mencatat ${result.data.accepted} baris.`);
+          logMessage(`<span style="color:var(--success)">Berhasil menyimpan ${result.data.accepted} baris ke server.</span>`);
         } else {
-          logMessage(`ERROR: ${result.error}`);
+          logMessage(`<span style="color:var(--error)">Gagal: ${result.error}</span>`);
         }
       } catch (error) {
-        logMessage(`GAGAL: Terputus dari server.`);
+        logMessage(`<span style="color:var(--error)">Error koneksi ke server.</span>`);
       }
     }
 
-    // Uji Rute GET Latest
+    // GET Latest dan Update Grafik Bar
     async function fetchLatestData() {
       const devId = getDeviceId();
-      logMessage(`Meminta data terakhir untuk ${devId}...`);
+      logMessage(`Meminta data terakhir dari server...`);
       
       try {
         const response = await fetch(`${BASE_URL}?path=telemetry/accel/latest&device_id=${devId}`);
@@ -207,18 +241,24 @@
         
         if(result.ok) {
           const t = new Date(result.data.t).toLocaleTimeString('id-ID');
-          logMessage(`LATEST SERVER: X=${result.data.x}, Y=${result.data.y}, Z=${result.data.z} (${t})`);
+          logMessage(`<strong>Data Diterima (${t}):</strong> X=${result.data.x}, Y=${result.data.y}, Z=${result.data.z}`);
+          
+          // Mengupdate Grafik Latest (Bar Chart)
+          latestChart.updateSeries([{
+            name: 'Nilai Terbaru',
+            data: [result.data.x, result.data.y, result.data.z]
+          }]);
+          
         } else {
-          logMessage(`SERVER BALAS: ${result.error}`);
+          logMessage(`<span style="color:var(--error)">Server membalas: ${result.error}</span>`);
         }
       } catch (e) {
-        logMessage(`GAGAL: Tidak dapat mengambil data.`);
+        logMessage(`<span style="color:var(--error)">Gagal mengambil data terbaru.</span>`);
       }
     }
 
     // Kontrol Sensor
     function startSensor() {
-      // Meminta izin sensor khusus pengguna iOS (iPhone)
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
           .then(permissionState => {
@@ -229,37 +269,38 @@
             }
           }).catch(console.error);
       } else {
-        mulaiPerekaman(); // Android / Laptop
+        mulaiPerekaman(); 
       }
     }
 
     function mulaiPerekaman() {
       isRecording = true;
+      lastCaptureTime = new Date().getTime(); // Reset rem
+      
       document.getElementById("btnStart").style.display = "none";
       document.getElementById("btnStop").style.display = "block";
-      logMessage("Sensor Accelerometer aktif.");
+      logMessage("Sensor Accelerometer diaktifkan.");
 
       window.addEventListener('devicemotion', handleMotion);
-
-      // Kirim data ke GAS setiap 3 detik agar tidak membebani server
       batchIntervalId = setInterval(sendBatchToServer, 3000);
     }
 
     function stopSensor() {
-      isRecording = false;
+      isRecording = false; // Mematikan pencatatan, tapi grafik mematung (tidak hilang)
+      
       document.getElementById("btnStart").style.display = "block";
       document.getElementById("btnStop").style.display = "none";
       
       window.removeEventListener('devicemotion', handleMotion);
       clearInterval(batchIntervalId);
       
-      // Kirim sisa data yang belum terkirim
-      sendBatchToServer();
+      sendBatchToServer(); // Bersihkan sisa data
       logMessage("Sensor dihentikan.");
     }
 
     window.onload = () => {
-      initChart();
+      initRealtimeChart();
+      initLatestChart();
     };
   </script>
 </body>
