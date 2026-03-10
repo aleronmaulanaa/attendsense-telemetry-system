@@ -29,6 +29,9 @@
     .x-val { color: #ef4444; } .y-val { color: #10b981; } .z-val { color: #3b82f6; }
 
     input, button { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; margin-bottom: 12px; }
+    .input-group { display: flex; gap: 8px; margin-bottom: 12px; }
+    .input-group input { margin-bottom: 0; }
+    
     button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2); }
     button:hover { background: var(--primary-dark); transform: translateY(-2px); }
     .btn-danger { background: var(--error); box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2); }
@@ -36,7 +39,6 @@
     
     #chart, #latestChart { min-height: 250px; margin-top: 16px; }
     
-    /* Log Box dibuat gaya biasa / bersih */
     .log-box { background: #f8fafc; color: var(--text); padding: 12px; border-radius: 10px; font-size: 0.9rem; height: 120px; overflow-y: auto; line-height: 1.6; border: 1px solid var(--border); }
     .log-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; }
     .log-time { color: var(--text-light); font-size: 0.8rem; margin-right: 8px; }
@@ -53,7 +55,11 @@
   <div class="container">
     <div class="card">
       <h2><i class="fas fa-mobile-alt"></i> Status Perangkat</h2>
-      <input type="text" id="deviceId" placeholder="Device ID" readonly />
+      
+      <div class="input-group">
+        <input type="text" id="deviceId" placeholder="Device ID" readonly style="flex: 1;" />
+        <input type="text" id="deviceType" placeholder="Mendeteksi OS..." readonly style="flex: 1.5; background: #f1f5f9; font-weight: 600; color: var(--primary-dark);" />
+      </div>
       
       <div class="sensor-grid">
         <div class="sensor-box"><span class="x-val">Sumbu X (Kiri/Kanan)</span><h3 id="valX" class="x-val">0.00</h3></div>
@@ -92,7 +98,7 @@
     let isRecording = false;
     let batchData = [];
     let batchIntervalId = null;
-    let lastCaptureTime = 0; // Untuk Pengereman (Throttling)
+    let lastCaptureTime = 0; 
     
     let realtimeChart;
     let latestChart;
@@ -108,14 +114,36 @@
       }
       return devId;
     }
-    document.getElementById("deviceId").value = getDeviceId();
+
+    // Fungsi Deteksi OS dan Tipe Perangkat
+    function detectDeviceOS() {
+      const ua = navigator.userAgent;
+      let os = "Desktop/Laptop";
+      let exactModel = "";
+
+      if (/android/i.test(ua)) {
+        os = "Android " + (/mobile/i.test(ua) ? "(HP)" : "(Tablet)");
+        // Coba ekstrak info tipe HP jika tersedia di Android (Hanya bekerja di beberapa browser)
+        let match = ua.match(/Android.*?; (.*?) Build/);
+        if (match && match[1]) exactModel = ` - ${match[1]}`;
+      } else if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        os = "Apple iOS " + (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? "(iPad)" : "(iPhone)");
+      } else if (/windows/i.test(ua)) {
+        os = "Windows OS";
+      } else if (/macintosh|mac os x/i.test(ua)) {
+        os = "macOS";
+      } else if (/linux/i.test(ua)) {
+        os = "Linux OS";
+      }
+
+      return os + exactModel;
+    }
 
     // Fungsi Logger Bersih
     function logMessage(msg) {
       const logBox = document.getElementById("serverLog");
       const time = new Date().toLocaleTimeString('id-ID');
       
-      // Hapus tulisan 'Menunggu instruksi...' jika ada
       if(logBox.innerHTML.includes("Menunggu instruksi")) logBox.innerHTML = "";
       
       const newLog = `<div class="log-item"><span class="log-time">[${time}]</span> ${msg}</div>`;
@@ -138,9 +166,15 @@
         colors: ['#ef4444', '#10b981', '#3b82f6'],
         dataLabels: { enabled: false },
         stroke: { curve: 'smooth', width: 3 },
-        xaxis: { type: 'datetime', range: 5000 }, // 5 Detik visual
+        
+        xaxis: { 
+          type: 'datetime', 
+          range: 5000,
+          labels: { datetimeUTC: false }
+        },
         yaxis: { max: 15, min: -15, tickAmount: 6 },
-        legend: { show: true, position: 'top' }
+        legend: { show: true, position: 'top' },
+        tooltip: { x: { format: 'HH:mm:ss' } }
       };
 
       realtimeChart = new ApexCharts(document.querySelector("#chart"), options);
@@ -163,13 +197,12 @@
       latestChart.render();
     }
 
-    // Menangkap Gerakan HP (Dengan Rem / Throttle)
+    // Menangkap Gerakan HP
     function handleMotion(event) {
       if (!isRecording) return;
 
       let now = new Date().getTime();
       
-      // REM: Cukup ambil data tiap 200ms (5 kali per detik). Mencegah HP Hang!
       if (now - lastCaptureTime < 200) return;
       lastCaptureTime = now;
 
@@ -192,8 +225,12 @@
         dataX.shift(); dataY.shift(); dataZ.shift();
       }
 
-      // Update Grafik Realtime
-      realtimeChart.updateSeries([{ data: dataX }, { data: dataY }, { data: dataZ }]);
+      // PERBAIKAN: Menambahkan 'name' secara eksplisit agar legenda tidak berubah jadi series-1
+      realtimeChart.updateSeries([
+        { name: 'Sumbu X', data: dataX }, 
+        { name: 'Sumbu Y', data: dataY }, 
+        { name: 'Sumbu Z', data: dataZ }
+      ]);
 
       batchData.push({ t: new Date(now).toISOString(), x: x, y: y, z: z });
     }
@@ -243,7 +280,6 @@
           const t = new Date(result.data.t).toLocaleTimeString('id-ID');
           logMessage(`<strong>Data Diterima (${t}):</strong> X=${result.data.x}, Y=${result.data.y}, Z=${result.data.z}`);
           
-          // Mengupdate Grafik Latest (Bar Chart)
           latestChart.updateSeries([{
             name: 'Nilai Terbaru',
             data: [result.data.x, result.data.y, result.data.z]
@@ -257,7 +293,6 @@
       }
     }
 
-    // Kontrol Sensor
     function startSensor() {
       if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
@@ -275,7 +310,7 @@
 
     function mulaiPerekaman() {
       isRecording = true;
-      lastCaptureTime = new Date().getTime(); // Reset rem
+      lastCaptureTime = new Date().getTime();
       
       document.getElementById("btnStart").style.display = "none";
       document.getElementById("btnStop").style.display = "block";
@@ -286,19 +321,20 @@
     }
 
     function stopSensor() {
-      isRecording = false; // Mematikan pencatatan, tapi grafik mematung (tidak hilang)
-      
+      isRecording = false; 
       document.getElementById("btnStart").style.display = "block";
       document.getElementById("btnStop").style.display = "none";
       
       window.removeEventListener('devicemotion', handleMotion);
       clearInterval(batchIntervalId);
       
-      sendBatchToServer(); // Bersihkan sisa data
+      sendBatchToServer(); 
       logMessage("Sensor dihentikan.");
     }
 
     window.onload = () => {
+      document.getElementById("deviceId").value = getDeviceId();
+      document.getElementById("deviceType").value = detectDeviceOS(); // Panggil fungsi deteksi OS
       initRealtimeChart();
       initLatestChart();
     };
