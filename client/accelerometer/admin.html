@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AttendSense - Admin Dashboard</title>
+  
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  
+  <style>
+    :root { --primary: #0f766e; --primary-dark: #115e59; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; --warning: #f59e0b; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* Latar belakang sedikit berbeda (hijau tosca) agar Admin tahu ini bukan halaman Client */
+    body { font-family: "Inter", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #ccfbf1 100%); color: var(--text); min-height: 100vh; }
+    
+    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px; text-align: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; box-shadow: 0 10px 15px -3px rgba(15, 118, 110, 0.2); position: relative; }
+    .back-button { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: 0.3s; }
+    .back-button:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+    
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    .card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid var(--border); }
+    .card h2 { font-size: 1.25rem; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; color: var(--primary-dark); }
+    
+    .control-panel { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; background: #f1f5f9; padding: 16px; border-radius: 12px; border: 1px solid var(--border); }
+    .control-panel input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; }
+    .btn { padding: 12px 24px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; display: flex; align-items: center; gap: 8px; }
+    .btn-start { background: var(--primary); }
+    .btn-start:hover { background: var(--primary-dark); }
+    .btn-stop { background: var(--error); display: none; }
+    .btn-stop:hover { background: #b91c1c; }
+    
+    .status-badge { font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; font-weight: 600; background: #e2e8f0; color: var(--text-light); display: flex; align-items: center; gap: 6px; }
+    .status-badge.active { background: #d1fae5; color: #047857; }
+    .status-badge.active i { animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    #chart, #latestChart { min-height: 250px; margin-top: 16px; }
+    
+    .log-box { background: #f8fafc; color: var(--text); padding: 12px; border-radius: 10px; font-size: 0.85rem; height: 120px; overflow-y: auto; line-height: 1.6; border: 1px solid var(--border); font-family: monospace; }
+    .log-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; }
+    .log-time { color: var(--text-light); font-size: 0.75rem; margin-right: 8px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
+    <h1><i class="fas fa-chart-pie"></i> Dashboard Admin</h1>
+    <p style="font-size: 0.9rem; margin-top: 4px; opacity: 0.8;">Pemantauan Telemetri Real-Time</p>
+  </header>
+
+  <div class="container">
+    
+    <div class="card">
+      <h2>
+        <span><i class="fas fa-sliders-h"></i> Panel Kontrol Pemantauan</span>
+        <div id="statusBadge" class="status-badge"><i class="fas fa-circle"></i> Offline</div>
+      </h2>
+      <p style="font-size: 0.9rem; color: var(--text-light); margin-bottom: 12px;">Masukkan Device ID spesifik untuk dipantau, atau kosongkan untuk memantau data terakhir dari perangkat mana pun.</p>
+      
+      <div class="control-panel">
+        <input type="text" id="targetDeviceId" placeholder="Contoh: DEV-AQXRWYX2 (Opsional)" />
+        <button id="btnStart" class="btn btn-start" onclick="startPolling()"><i class="fas fa-play"></i> Mulai Live Monitor</button>
+        <button id="btnStop" class="btn btn-stop" onclick="stopPolling()"><i class="fas fa-stop"></i> Hentikan</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-chart-line"></i> Grafik Arus Data (Live Stream)</h2>
+      <div id="chart"></div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-chart-bar"></i> Posisi Terakhir Perangkat</h2>
+      <div id="latestChart"></div>
+    </div>
+
+    <div class="card">
+      <h2><i class="fas fa-server"></i> Log Tarikan Data Server</h2>
+      <div id="serverLog" class="log-box">
+        <div class="log-item">Sistem siap. Klik 'Mulai Live Monitor' untuk menarik data...</div>
+      </div>
+    </div>
+    
+  </div>
+
+  <script>
+    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbyDBQvFuxHJ1QThc9Upe2wG5oLJJ7DT2rcvoqPX-FSVp9i6Jtq4DseuMW-gb1U4fxN8/exec";
+    
+    let realtimeChart;
+    let latestChart;
+    let dataX = [], dataY = [], dataZ = [];
+    const MAX_DATA_POINTS = 20; 
+    let pollingInterval = null;
+
+    // Fungsi Logger
+    function logMessage(msg) {
+      const logBox = document.getElementById("serverLog");
+      const time = new Date().toLocaleTimeString('id-ID');
+      if(logBox.innerHTML.includes("Sistem siap")) logBox.innerHTML = "";
+      const newLog = `<div class="log-item"><span class="log-time">[${time}]</span> ${msg}</div>`;
+      logBox.innerHTML = newLog + logBox.innerHTML;
+    }
+
+    // Inisialisasi Grafik Realtime
+    function initRealtimeChart() {
+      var options = {
+        series: [
+          { name: 'Sumbu X', data: dataX.slice() },
+          { name: 'Sumbu Y', data: dataY.slice() },
+          { name: 'Sumbu Z', data: dataZ.slice() }
+        ],
+        chart: {
+          id: 'realtime', height: 250, type: 'line',
+          animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 800 } },
+          toolbar: { show: false }, zoom: { enabled: false }
+        },
+        colors: ['#ef4444', '#10b981', '#3b82f6'],
+        dataLabels: { enabled: false },
+        stroke: { curve: 'smooth', width: 3 },
+        xaxis: { 
+          type: 'datetime', 
+          range: 20000, // Menampilkan jendela waktu 20 detik terakhir
+          labels: { datetimeUTC: false }
+        },
+        yaxis: { max: 15, min: -15, tickAmount: 6 },
+        legend: { show: true, position: 'top' }
+      };
+      realtimeChart = new ApexCharts(document.querySelector("#chart"), options);
+      realtimeChart.render();
+    }
+
+    // Inisialisasi Grafik Batang
+    function initLatestChart() {
+      var options = {
+        series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
+        chart: { type: 'bar', height: 250, toolbar: { show: false } },
+        colors: ['#ef4444', '#10b981', '#3b82f6'],
+        plotOptions: { bar: { borderRadius: 4, horizontal: false, distributed: true } },
+        dataLabels: { enabled: true },
+        xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] },
+        yaxis: { max: 15, min: -15 }
+      };
+      latestChart = new ApexCharts(document.querySelector("#latestChart"), options);
+      latestChart.render();
+    }
+
+    // Fungsi Inti: Menarik Data dari Server
+    async function fetchServerData() {
+      const targetDevId = document.getElementById("targetDeviceId").value.trim();
+      let fetchUrl = `${BASE_URL}?path=telemetry/accel/latest`;
+      
+      // Jika Admin memasukkan ID spesifik, tambahkan parameter pencarian
+      if (targetDevId !== "") {
+        fetchUrl += `&device_id=${targetDevId}`;
+      }
+
+      try {
+        const response = await fetch(fetchUrl);
+        const result = await response.json();
+        
+        if(result.ok) {
+          let now = new Date().getTime(); 
+          let x = result.data.x;
+          let y = result.data.y;
+          let z = result.data.z;
+          let device = result.data.device_id;
+
+          logMessage(`Data masuk [${device}]: X=${x}, Y=${y}, Z=${z}`);
+
+          // 1. Update Grafik Real-Time
+          dataX.push([now, x]);
+          dataY.push([now, y]);
+          dataZ.push([now, z]);
+
+          if (dataX.length > MAX_DATA_POINTS) {
+            dataX.shift(); dataY.shift(); dataZ.shift();
+          }
+
+          realtimeChart.updateSeries([
+            { name: 'Sumbu X', data: dataX }, 
+            { name: 'Sumbu Y', data: dataY }, 
+            { name: 'Sumbu Z', data: dataZ }
+          ]);
+
+          // 2. Update Grafik Batang
+          latestChart.updateSeries([{
+            name: 'Nilai Terbaru',
+            data: [x, y, z]
+          }]);
+          
+        } else {
+          logMessage(`<span style="color:var(--warning)">Peringatan: ${result.error}</span>`);
+        }
+      } catch (e) {
+        logMessage(`<span style="color:var(--error)">Gagal terhubung ke server Google.</span>`);
+      }
+    }
+
+    // Kontrol Polling
+    function startPolling() {
+      document.getElementById("btnStart").style.display = "none";
+      document.getElementById("btnStop").style.display = "flex";
+      
+      const badge = document.getElementById("statusBadge");
+      badge.classList.add("active");
+      badge.innerHTML = `<i class="fas fa-circle"></i> Live (Auto-Refresh)`;
+      
+      logMessage("Memulai pemantauan otomatis setiap 3 detik...");
+      
+      // Tarik data seketika saat tombol ditekan
+      fetchServerData(); 
+      // Lalu ulangi setiap 3 detik (3000 ms)
+      pollingInterval = setInterval(fetchServerData, 3000);
+    }
+
+    function stopPolling() {
+      document.getElementById("btnStart").style.display = "flex";
+      document.getElementById("btnStop").style.display = "none";
+      
+      const badge = document.getElementById("statusBadge");
+      badge.classList.remove("active");
+      badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
+
+      clearInterval(pollingInterval);
+      logMessage("Pemantauan dihentikan.");
+    }
+
+    // Jalankan saat halaman dimuat
+    window.onload = () => {
+      initRealtimeChart();
+      initLatestChart();
+    };
+  </script>
+</body>
+</html>

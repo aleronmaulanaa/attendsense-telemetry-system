@@ -127,7 +127,7 @@
         cursor: pointer;
         color: var(--text);
         text-decoration: none;
-        display: block; /* Memastikan tag a maupun div berperilaku sama */
+        display: block;
       }
 
       .feature-card::before {
@@ -295,17 +295,18 @@
 
     <div class="container">
       <div id="homepage">
+        
         <div class="feature-card" onclick="openModal('qrModal')">
           <i class="fas fa-qrcode"></i>
           <h3>QR Presence</h3>
           <p>Absensi menggunakan QR Code untuk dosen dan mahasiswa.</p>
         </div>
         
-        <a href="client/accelerometer/accel.html" class="feature-card">
+        <div class="feature-card" onclick="openModal('accelModal')">
           <i class="fas fa-mobile-alt"></i>
           <h3>Accelerometer</h3>
           <p>Telemetri sensor gerak realtime dengan grafik ApexCharts.</p>
-        </a>
+        </div>
         
         <div class="feature-card" onclick="alert('Fitur sedang dalam pengembangan.');">
           <i class="fas fa-map-marker-alt"></i>
@@ -331,33 +332,52 @@
       </div>
     </div>
 
+    <div id="accelModal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="close-btn" aria-label="Tutup" onclick="closeModal('accelModal')">&times;</button>
+        <h2>Pilih Peran Accelerometer</h2>
+        <p>Silakan pilih antarmuka yang ingin Anda buka.</p>
+        <div class="role-buttons">
+          <a href="client/accelerometer/client.html" class="btn btn-primary">
+            <i class="fas fa-mobile-alt"></i> Masuk sebagai Client (Sensor)
+          </a>
+          <a href="client/accelerometer/admin.html" class="btn btn-secondary" style="border-color: #0284c7; color: #0284c7;">
+            <i class="fas fa-chart-bar"></i> Masuk sebagai Admin (Dashboard)
+          </a>
+        </div>
+      </div>
+    </div>
+
     <script>
       // Fungsi untuk membuka modal
       function openModal(modalId) {
         document.getElementById(modalId).classList.add('active');
-        // Mencegah body agar tidak bisa di-scroll saat modal terbuka
         document.body.style.overflow = 'hidden'; 
       }
 
       // Fungsi untuk menutup modal
       function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
-        // Mengembalikan scroll pada body
         document.body.style.overflow = '';
       }
 
-      // Menutup modal jika user mengklik area abu-abu (overlay) di luar konten modal
+      // Menutup modal jika user mengklik area luar (overlay)
       window.onclick = function(event) {
-        const modal = document.getElementById('qrModal');
-        if (event.target === modal) {
+        const qrModal = document.getElementById('qrModal');
+        const accelModal = document.getElementById('accelModal');
+        
+        if (event.target === qrModal) {
           closeModal('qrModal');
+        } else if (event.target === accelModal) {
+          closeModal('accelModal');
         }
       }
 
-      // Aksesibilitas: Menutup modal dengan tombol Escape pada keyboard (berguna saat presentasi di laptop)
+      // Menutup modal dengan tombol Escape pada keyboard
       document.addEventListener('keydown', function(event) {
         if (event.key === "Escape") {
           closeModal('qrModal');
+          closeModal('accelModal');
         }
       });
     </script>

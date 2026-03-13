@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AttendSense - Accel Client</title>
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  
+  <style>
+    :root { --primary: #0284c7; --primary-dark: #0369a1; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Inter", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #e0f2fe 100%); color: var(--text); min-height: 100vh; }
+    
+    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px; text-align: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.2); position: relative; }
+    .back-button { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: 0.3s; }
+    .back-button:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+    
+    .container { max-width: 600px; margin: 0 auto; padding: 24px; }
+    .card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid var(--border); text-align: center; }
+    .card h2 { font-size: 1.25rem; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--primary-dark); }
+    
+    .sensor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .sensor-box { background: #f1f5f9; padding: 16px 12px; border-radius: 12px; border: 1px solid var(--border); }
+    .sensor-box span { font-size: 0.8rem; color: var(--text-light); font-weight: 600; display: block; margin-bottom: 8px; }
+    .sensor-box h3 { font-size: 1.8rem; font-family: monospace; }
+    .x-val { color: #ef4444; } .y-val { color: #10b981; } .z-val { color: #3b82f6; }
+
+    input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; margin-bottom: 12px; text-align: center; }
+    .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
+    .input-group input { margin-bottom: 0; }
+    
+    button { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    
+    .log-box { background: #f8fafc; color: var(--text); padding: 12px; border-radius: 10px; font-size: 0.85rem; height: 100px; overflow-y: auto; text-align: left; line-height: 1.6; border: 1px solid var(--border); margin-top: 16px; }
+    .log-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; }
+    .log-time { color: var(--text-light); font-size: 0.75rem; margin-right: 8px; }
+
+    /* Animasi Radar Aktif */
+    .radar-container { display: none; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; color: var(--primary); font-weight: 600; }
+    .pulse-dot { width: 12px; height: 12px; background-color: var(--primary); border-radius: 50%; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    @keyframes ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
+    <h1><i class="fas fa-satellite-dish"></i> Client Sensor</h1>
+    <p style="font-size: 0.9rem; margin-top: 4px; opacity: 0.8;">Mengirim data ke Dashboard Admin</p>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h2><i class="fas fa-id-badge"></i> Identitas Perangkat</h2>
+      <div class="input-group">
+        <input type="text" id="deviceId" placeholder="Device ID" readonly style="flex: 1;" />
+        <input type="text" id="deviceType" placeholder="Mendeteksi OS..." readonly style="flex: 1.5; background: #f1f5f9; font-weight: 600; color: var(--primary-dark);" />
+      </div>
+
+      <div class="radar-container" id="radarStatus">
+        <div class="pulse-dot"></div>
+        <span>Memantau & Mengirim Data...</span>
+      </div>
+      
+      <div class="sensor-grid">
+        <div class="sensor-box"><span class="x-val">X (Kiri/Kanan)</span><h3 id="valX" class="x-val">0.00</h3></div>
+        <div class="sensor-box"><span class="y-val">Y (Atas/Bawah)</span><h3 id="valY" class="y-val">0.00</h3></div>
+        <div class="sensor-box"><span class="z-val">Z (Depan/Blk)</span><h3 id="valZ" class="z-val">0.00</h3></div>
+      </div>
+
+      <button id="btnStart" class="btn-primary" onclick="startSensor()"><i class="fas fa-broadcast-tower"></i> Mulai Transmisi Data</button>
+      <button id="btnStop" class="btn-danger" onclick="stopSensor()" style="display: none;"><i class="fas fa-stop-circle"></i> Hentikan Transmisi</button>
+
+      <div id="serverLog" class="log-box">
+        <div class="log-item">Menunggu instruksi transmisi...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbyDBQvFuxHJ1QThc9Upe2wG5oLJJ7DT2rcvoqPX-FSVp9i6Jtq4DseuMW-gb1U4fxN8/exec";
+    
+    let isRecording = false;
+    let batchData = [];
+    let batchIntervalId = null;
+    let lastCaptureTime = 0; 
+
+    function getDeviceId() {
+      let devId = localStorage.getItem("attendsense_device_id");
+      if (!devId) {
+        devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+        localStorage.setItem("attendsense_device_id", devId);
+      }
+      return devId;
+    }
+
+    function detectDeviceOS() {
+      const ua = navigator.userAgent;
+      let os = "Desktop/Laptop";
+      let exactModel = "";
+      if (/android/i.test(ua)) {
+        os = "Android " + (/mobile/i.test(ua) ? "(HP)" : "(Tablet)");
+        let match = ua.match(/Android.*?; (.*?) Build/);
+        if (match && match[1]) exactModel = ` - ${match[1]}`;
+      } else if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+        os = "Apple iOS " + (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? "(iPad)" : "(iPhone)");
+      } else if (/windows/i.test(ua)) { os = "Windows OS"; } 
+      else if (/macintosh|mac os x/i.test(ua)) { os = "macOS"; }
+      return os + exactModel;
+    }
+
+    function logMessage(msg) {
+      const logBox = document.getElementById("serverLog");
+      const time = new Date().toLocaleTimeString('id-ID');
+      if(logBox.innerHTML.includes("Menunggu instruksi")) logBox.innerHTML = "";
+      const newLog = `<div class="log-item"><span class="log-time">[${time}]</span> ${msg}</div>`;
+      logBox.innerHTML = newLog + logBox.innerHTML;
+    }
+
+    function handleMotion(event) {
+      if (!isRecording) return;
+      let now = new Date().getTime();
+      if (now - lastCaptureTime < 200) return; // Rem 5x per detik
+      lastCaptureTime = now;
+
+      let acc = event.accelerationIncludingGravity;
+      if (!acc || acc.x === null) return;
+
+      let x = parseFloat(acc.x.toFixed(2));
+      let y = parseFloat(acc.y.toFixed(2));
+      let z = parseFloat(acc.z.toFixed(2));
+
+      document.getElementById("valX").innerText = x;
+      document.getElementById("valY").innerText = y;
+      document.getElementById("valZ").innerText = z;
+
+      batchData.push({ t: new Date(now).toISOString(), x: x, y: y, z: z });
+    }
+
+    async function sendBatchToServer() {
+      if (batchData.length === 0) return;
+      const payloadSamples = [...batchData]; 
+      batchData = []; 
+
+      const payload = {
+        device_id: getDeviceId(),
+        ts: new Date().toISOString(),
+        samples: payloadSamples
+      };
+
+      try {
+        const response = await fetch(`${BASE_URL}?path=telemetry/accel`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        
+        if (result.ok) {
+          logMessage(`<span style="color:var(--success)">Terkirim ${result.data.accepted} titik data.</span>`);
+        } else {
+          logMessage(`<span style="color:var(--error)">Gagal: ${result.error}</span>`);
+        }
+      } catch (error) {
+        logMessage(`<span style="color:var(--error)">Error koneksi internet.</span>`);
+      }
+    }
+
+    function startSensor() {
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') { mulaiPerekaman(); } 
+            else { alert("Izin sensor ditolak!"); }
+          }).catch(console.error);
+      } else { mulaiPerekaman(); }
+    }
+
+    function mulaiPerekaman() {
+      isRecording = true;
+      lastCaptureTime = new Date().getTime();
+      
+      document.getElementById("btnStart").style.display = "none";
+      document.getElementById("btnStop").style.display = "block";
+      document.getElementById("radarStatus").style.display = "flex";
+      logMessage("Memulai transmisi data...");
+
+      window.addEventListener('devicemotion', handleMotion);
+      batchIntervalId = setInterval(sendBatchToServer, 3000);
+    }
+
+    function stopSensor() {
+      isRecording = false; 
+      document.getElementById("btnStart").style.display = "block";
+      document.getElementById("btnStop").style.display = "none";
+      document.getElementById("radarStatus").style.display = "none";
+      
+      window.removeEventListener('devicemotion', handleMotion);
+      clearInterval(batchIntervalId);
+      
+      sendBatchToServer(); 
+      logMessage("Transmisi dihentikan.");
+    }
+
+    window.onload = () => {
+      document.getElementById("deviceId").value = getDeviceId();
+      document.getElementById("deviceType").value = detectDeviceOS();
+    };
+  </script>
+</body>
+</html>
