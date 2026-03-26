@@ -3,341 +3,120 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AttendSense - Accelerometer Telemetry</title>
-  
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <title>AttendSense - Accelerometer Presentation</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
   
   <style>
-    :root { --primary: #0284c7; --primary-dark: #0369a1; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; --warning: #f59e0b; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: "Inter", sans-serif; background: linear-gradient(135deg, var(--bg) 0%, #e0f2fe 100%); color: var(--text); min-height: 100vh; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Inter", sans-serif;
+      background: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Mencegah scroll ganda di halaman utama */
+    }
     
-    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 24px; text-align: center; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; box-shadow: 0 10px 15px -3px rgba(2, 132, 199, 0.2); position: relative; }
-    .back-button { position: absolute; left: 24px; top: 50%; transform: translateY(-50%); background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: 0.3s; }
-    .back-button:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
-    
-    .container { max-width: 800px; margin: 0 auto; padding: 24px; }
-    .card { background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid var(--border); }
-    .card h2 { font-size: 1.25rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--primary-dark); }
-    
-    .sensor-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; text-align: center; }
-    .sensor-box { background: #f1f5f9; padding: 12px; border-radius: 12px; border: 1px solid var(--border); }
-    .sensor-box span { font-size: 0.8rem; color: var(--text-light); font-weight: 600; }
-    .sensor-box h3 { font-size: 1.5rem; margin-top: 4px; font-family: monospace; }
-    .x-val { color: #ef4444; } .y-val { color: #10b981; } .z-val { color: #3b82f6; }
+    header {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: white;
+      padding: 20px 24px;
+      text-align: center;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+      position: relative;
+    }
 
-    input, button { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 1rem; margin-bottom: 12px; }
-    .input-group { display: flex; gap: 8px; margin-bottom: 12px; }
-    .input-group input { margin-bottom: 0; }
+    .back-button {
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+    .back-button:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+    }
+    header p {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .iframe-wrapper {
+      display: flex;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
     
-    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2); }
-    button:hover { background: var(--primary-dark); transform: translateY(-2px); }
-    .btn-danger { background: var(--error); box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2); }
-    .btn-danger:hover { background: #b91c1c; }
+    iframe {
+      border: none;
+      height: 100%;
+      width: 100%;
+    }
     
-    #chart, #latestChart { min-height: 250px; margin-top: 16px; }
+    /* Mengatur proporsi lebar iframe */
+    #frame-client {
+      flex: 1; /* Mengambil 1/2 ruang untuk Client */
+      border-right: 2px solid #e2e8f0;
+      background: #f8fafc;
+    }
     
-    .log-box { background: #f8fafc; color: var(--text); padding: 12px; border-radius: 10px; font-size: 0.9rem; height: 120px; overflow-y: auto; line-height: 1.6; border: 1px solid var(--border); }
-    .log-item { border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; }
-    .log-time { color: var(--text-light); font-size: 0.8rem; margin-right: 8px; }
+    #frame-admin {
+      flex: 1.5; /* Mengambil 1.5 ruang agar grafik admin lebih lebar dan jelas */
+      background: #ccfbf1; 
+    }
+
+    /* Responsif untuk layar kecil (ditumpuk atas bawah) */
+    @media (max-width: 1024px) {
+      .iframe-wrapper {
+        flex-direction: column;
+      }
+      #frame-client {
+        border-right: none;
+        border-bottom: 2px solid #e2e8f0;
+        flex: 1;
+      }
+      #frame-admin {
+        flex: 1;
+      }
+    }
   </style>
 </head>
 <body>
-
   <header>
-    <a href="../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
-    <h1><i class="fas fa-satellite-dish"></i> Telemetri Sensor</h1>
-    <p style="font-size: 0.9rem; margin-top: 4px; opacity: 0.8;">Modul 2: Accelerometer Test</p>
+    <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
+    <h1><i class="fas fa-mobile-alt"></i> Presentasi Modul 2: Accelerometer</h1>
+    <p>Simulasi Interaktif: Client (Kiri) dan Admin Dashboard (Kanan)</p>
   </header>
 
-  <div class="container">
-    <div class="card">
-      <h2><i class="fas fa-mobile-alt"></i> Status Perangkat</h2>
-      
-      <div class="input-group">
-        <input type="text" id="deviceId" placeholder="Device ID" readonly style="flex: 1;" />
-        <input type="text" id="deviceType" placeholder="Mendeteksi OS..." readonly style="flex: 1.5; background: #f1f5f9; font-weight: 600; color: var(--primary-dark);" />
-      </div>
-      
-      <div class="sensor-grid">
-        <div class="sensor-box"><span class="x-val">Sumbu X (Kiri/Kanan)</span><h3 id="valX" class="x-val">0.00</h3></div>
-        <div class="sensor-box"><span class="y-val">Sumbu Y (Atas/Bawah)</span><h3 id="valY" class="y-val">0.00</h3></div>
-        <div class="sensor-box"><span class="z-val">Sumbu Z (Depan/Blkng)</span><h3 id="valZ" class="z-val">0.00</h3></div>
-      </div>
-
-      <button id="btnStart" onclick="startSensor()"><i class="fas fa-play"></i> Mulai Rekam & Kirim Batch</button>
-      <button id="btnStop" class="btn-danger" onclick="stopSensor()" style="display: none;"><i class="fas fa-stop"></i> Hentikan Sensor</button>
-    </div>
-
-    <div class="card">
-      <h2><i class="fas fa-chart-line"></i> Grafik Real-Time</h2>
-      <div id="chart"></div>
-    </div>
-
-    <div class="card">
-      <h2><i class="fas fa-list"></i> Riwayat Aktivitas</h2>
-      <div id="serverLog" class="log-box">
-        <div class="log-item">Menunggu instruksi...</div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2><i class="fas fa-cloud-download-alt"></i> Tarik Data Server (GET Latest)</h2>
-      <button onclick="fetchLatestData()" style="background: var(--warning); color: #000;"><i class="fas fa-sync-alt"></i> Cek Data Terbaru</button>
-      <div id="latestChart"></div>
-    </div>
+  <div class="iframe-wrapper">
+    <iframe id="frame-client" src="client.html" title="Tampilan Client"></iframe>
+    
+    <iframe id="frame-admin" src="admin.html" title="Tampilan Admin"></iframe>
   </div>
 
-  <script>
-    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
-    const BASE_URL = "https://script.google.com/macros/s/AKfycbyDBQvFuxHJ1QThc9Upe2wG5oLJJ7DT2rcvoqPX-FSVp9i6Jtq4DseuMW-gb1U4fxN8/exec";
-    
-    // Variabel Global
-    let isRecording = false;
-    let batchData = [];
-    let batchIntervalId = null;
-    let lastCaptureTime = 0; 
-    
-    let realtimeChart;
-    let latestChart;
-    let dataX = [], dataY = [], dataZ = [];
-    const MAX_DATA_POINTS = 30; 
-
-    // Generate Device ID
-    function getDeviceId() {
-      let devId = localStorage.getItem("attendsense_device_id");
-      if (!devId) {
-        devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-        localStorage.setItem("attendsense_device_id", devId);
-      }
-      return devId;
-    }
-
-    // Fungsi Deteksi OS dan Tipe Perangkat
-    function detectDeviceOS() {
-      const ua = navigator.userAgent;
-      let os = "Desktop/Laptop";
-      let exactModel = "";
-
-      if (/android/i.test(ua)) {
-        os = "Android " + (/mobile/i.test(ua) ? "(HP)" : "(Tablet)");
-        // Coba ekstrak info tipe HP jika tersedia di Android (Hanya bekerja di beberapa browser)
-        let match = ua.match(/Android.*?; (.*?) Build/);
-        if (match && match[1]) exactModel = ` - ${match[1]}`;
-      } else if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
-        os = "Apple iOS " + (/iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? "(iPad)" : "(iPhone)");
-      } else if (/windows/i.test(ua)) {
-        os = "Windows OS";
-      } else if (/macintosh|mac os x/i.test(ua)) {
-        os = "macOS";
-      } else if (/linux/i.test(ua)) {
-        os = "Linux OS";
-      }
-
-      return os + exactModel;
-    }
-
-    // Fungsi Logger Bersih
-    function logMessage(msg) {
-      const logBox = document.getElementById("serverLog");
-      const time = new Date().toLocaleTimeString('id-ID');
-      
-      if(logBox.innerHTML.includes("Menunggu instruksi")) logBox.innerHTML = "";
-      
-      const newLog = `<div class="log-item"><span class="log-time">[${time}]</span> ${msg}</div>`;
-      logBox.innerHTML = newLog + logBox.innerHTML;
-    }
-
-    // 1. Inisialisasi Grafik Realtime
-    function initRealtimeChart() {
-      var options = {
-        series: [
-          { name: 'Sumbu X', data: dataX.slice() },
-          { name: 'Sumbu Y', data: dataY.slice() },
-          { name: 'Sumbu Z', data: dataZ.slice() }
-        ],
-        chart: {
-          id: 'realtime', height: 250, type: 'line',
-          animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 200 } },
-          toolbar: { show: false }, zoom: { enabled: false }
-        },
-        colors: ['#ef4444', '#10b981', '#3b82f6'],
-        dataLabels: { enabled: false },
-        stroke: { curve: 'smooth', width: 3 },
-        
-        xaxis: { 
-          type: 'datetime', 
-          range: 5000,
-          labels: { datetimeUTC: false }
-        },
-        yaxis: { max: 15, min: -15, tickAmount: 6 },
-        legend: { show: true, position: 'top' },
-        tooltip: { x: { format: 'HH:mm:ss' } }
-      };
-
-      realtimeChart = new ApexCharts(document.querySelector("#chart"), options);
-      realtimeChart.render();
-    }
-
-    // 2. Inisialisasi Grafik Batang untuk Latest Data
-    function initLatestChart() {
-      var options = {
-        series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
-        chart: { type: 'bar', height: 250, toolbar: { show: false } },
-        colors: ['#ef4444', '#10b981', '#3b82f6'],
-        plotOptions: { bar: { borderRadius: 4, horizontal: false, distributed: true } },
-        dataLabels: { enabled: true },
-        xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] },
-        yaxis: { max: 15, min: -15 }
-      };
-
-      latestChart = new ApexCharts(document.querySelector("#latestChart"), options);
-      latestChart.render();
-    }
-
-    // Menangkap Gerakan HP
-    function handleMotion(event) {
-      if (!isRecording) return;
-
-      let now = new Date().getTime();
-      
-      if (now - lastCaptureTime < 200) return;
-      lastCaptureTime = now;
-
-      let acc = event.accelerationIncludingGravity;
-      if (!acc || acc.x === null) return;
-
-      let x = parseFloat(acc.x.toFixed(2));
-      let y = parseFloat(acc.y.toFixed(2));
-      let z = parseFloat(acc.z.toFixed(2));
-
-      document.getElementById("valX").innerText = x;
-      document.getElementById("valY").innerText = y;
-      document.getElementById("valZ").innerText = z;
-
-      dataX.push([now, x]);
-      dataY.push([now, y]);
-      dataZ.push([now, z]);
-
-      if (dataX.length > MAX_DATA_POINTS) {
-        dataX.shift(); dataY.shift(); dataZ.shift();
-      }
-
-      // PERBAIKAN: Menambahkan 'name' secara eksplisit agar legenda tidak berubah jadi series-1
-      realtimeChart.updateSeries([
-        { name: 'Sumbu X', data: dataX }, 
-        { name: 'Sumbu Y', data: dataY }, 
-        { name: 'Sumbu Z', data: dataZ }
-      ]);
-
-      batchData.push({ t: new Date(now).toISOString(), x: x, y: y, z: z });
-    }
-
-    // Mengirim Batch ke Backend
-    async function sendBatchToServer() {
-      if (batchData.length === 0) return;
-
-      const payloadSamples = [...batchData]; 
-      batchData = []; 
-
-      const payload = {
-        device_id: getDeviceId(),
-        ts: new Date().toISOString(),
-        samples: payloadSamples
-      };
-
-      try {
-        logMessage(`Mengirim batch (${payloadSamples.length} sampel)...`);
-        const response = await fetch(`${BASE_URL}?path=telemetry/accel`, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        
-        if (result.ok) {
-          logMessage(`<span style="color:var(--success)">Berhasil menyimpan ${result.data.accepted} baris ke server.</span>`);
-        } else {
-          logMessage(`<span style="color:var(--error)">Gagal: ${result.error}</span>`);
-        }
-      } catch (error) {
-        logMessage(`<span style="color:var(--error)">Error koneksi ke server.</span>`);
-      }
-    }
-
-    // GET Latest dan Update Grafik Bar
-    async function fetchLatestData() {
-      const devId = getDeviceId();
-      logMessage(`Meminta data terakhir dari server...`);
-      
-      try {
-        const response = await fetch(`${BASE_URL}?path=telemetry/accel/latest&device_id=${devId}`);
-        const result = await response.json();
-        
-        if(result.ok) {
-          const t = new Date(result.data.t).toLocaleTimeString('id-ID');
-          logMessage(`<strong>Data Diterima (${t}):</strong> X=${result.data.x}, Y=${result.data.y}, Z=${result.data.z}`);
-          
-          latestChart.updateSeries([{
-            name: 'Nilai Terbaru',
-            data: [result.data.x, result.data.y, result.data.z]
-          }]);
-          
-        } else {
-          logMessage(`<span style="color:var(--error)">Server membalas: ${result.error}</span>`);
-        }
-      } catch (e) {
-        logMessage(`<span style="color:var(--error)">Gagal mengambil data terbaru.</span>`);
-      }
-    }
-
-    function startSensor() {
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        DeviceMotionEvent.requestPermission()
-          .then(permissionState => {
-            if (permissionState === 'granted') {
-              mulaiPerekaman();
-            } else {
-              alert("Izin sensor ditolak!");
-            }
-          }).catch(console.error);
-      } else {
-        mulaiPerekaman(); 
-      }
-    }
-
-    function mulaiPerekaman() {
-      isRecording = true;
-      lastCaptureTime = new Date().getTime();
-      
-      document.getElementById("btnStart").style.display = "none";
-      document.getElementById("btnStop").style.display = "block";
-      logMessage("Sensor Accelerometer diaktifkan.");
-
-      window.addEventListener('devicemotion', handleMotion);
-      batchIntervalId = setInterval(sendBatchToServer, 3000);
-    }
-
-    function stopSensor() {
-      isRecording = false; 
-      document.getElementById("btnStart").style.display = "block";
-      document.getElementById("btnStop").style.display = "none";
-      
-      window.removeEventListener('devicemotion', handleMotion);
-      clearInterval(batchIntervalId);
-      
-      sendBatchToServer(); 
-      logMessage("Sensor dihentikan.");
-    }
-
-    window.onload = () => {
-      document.getElementById("deviceId").value = getDeviceId();
-      document.getElementById("deviceType").value = detectDeviceOS(); // Panggil fungsi deteksi OS
-      initRealtimeChart();
-      initLatestChart();
-    };
-  </script>
 </body>
 </html>
