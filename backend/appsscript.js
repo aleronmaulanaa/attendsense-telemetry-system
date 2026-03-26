@@ -1,3 +1,6 @@
+// ==========================================
+// STEP 5: Standardisasi Format Response
+// ==========================================
 function sendSuccess(data) {
   return ContentService.createTextOutput(
     JSON.stringify({ ok: true, data }),
@@ -10,14 +13,18 @@ function sendError(error) {
   ).setMimeType(ContentService.MimeType.JSON);
 }
 
+// ==========================================
+// STEP 1 & 8: Router GET & UI Frontend
+// ==========================================
 function doGet(e) {
-  // Gunakan parameter ?path= (Default ke UI)
   const path = e.parameter && e.parameter.path ? e.parameter.path : "ui";
 
   if (path === "presence/status") {
     return handleCheckStatus(e.parameter);
   } else if (path === "presence/list") {
     return handleGetPresenceList(e.parameter);
+  } else if (path === "telemetry/accel/latest") { // <--- ROUTE BARU MODUL 2
+    return handleGetLatestAccel(e.parameter);
   } else if (path === "ui") {
     return HtmlService.createHtmlOutputFromFile("Index")
       .setTitle("Dashboard Presensi QR")
@@ -39,6 +46,8 @@ function doPost(e) {
       return handleGenerateQR(body);
     } else if (path === "presence/checkin") {
       return handleCheckIn(body);
+    } else if (path === "telemetry/accel") { // <--- ROUTE BARU MODUL 2
+      return handlePostAccel(body);
     } else {
       return sendError("Route not found");
     }
@@ -115,7 +124,7 @@ function processGenerateQR(payload) {
       payload.session_id,
       requestTime.toISOString(),
       expiresTime.toISOString(),
-      maxCapacity,
+      maxCapacity, // <--- Menyimpan batas maksimal kelas di kolom ke-6
     ]);
 
     return {
@@ -227,4 +236,77 @@ function handleCheckStatus(params) {
     }
   }
   return sendSuccess({ user_id: params.user_id, status: "not_checked_in" });
+}
+
+// ==========================================
+// MODUL 2: Accelerometer Telemetry
+// ==========================================
+
+function handlePostAccel(body) {
+  // 1. Validasi input
+  if (!body.device_id || !body.ts || !body.samples || !Array.isArray(body.samples)) {
+    return sendError("missing_field_or_invalid_format");
+  }
+
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("accel");
+    const recordedAt = new Date().toISOString();
+    const rows = []; // Array kosong untuk menampung rombongan data
+
+    // 2. Siapkan data untuk Batch Insert
+    // Header: device_id | x | y | z | sample_ts | batch_ts | recorded_at
+    for (let i = 0; i < body.samples.length; i++) {
+      let sample = body.samples[i];
+      rows.push([
+        body.device_id,
+        sample.x,
+        sample.y,
+        sample.z,
+        sample.t,
+        body.ts,
+        recordedAt
+      ]);
+    }
+
+    // 3. Eksekusi Batch Insert ke Spreadsheet (Lebih cepat dari appendRow)
+    if (rows.length > 0) {
+      const startRow = sheet.getLastRow() + 1;
+      const numRows = rows.length;
+      const numCols = rows[0].length;
+      
+      sheet.getRange(startRow, 1, numRows, numCols).setValues(rows);
+    }
+
+    // 4. Kembalikan respons sukses sesuai API Contract
+    return sendSuccess({ accepted: rows.length });
+  } catch (error) {
+    return sendError("database_error");
+  }
+}
+
+function handleGetLatestAccel(params) {
+  if (!params.device_id) return sendError("missing_device_id");
+
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("accel");
+    const data = sheet.getDataRange().getValues();
+
+    // Loop mundur dari baris paling bawah (data terbaru) ke atas
+    for (let i = data.length - 1; i > 0; i--) {
+      let row = data[i];
+      if (row[0] === params.device_id) {
+        return sendSuccess({
+          t: row[4], // Mengambil dari kolom sample_ts
+          x: row[1],
+          y: row[2],
+          z: row[3]
+        });
+      }
+    }
+    
+    // Jika tidak ditemukan
+    return sendError("data_not_found");
+  } catch (error) {
+    return sendError("database_error");
+  }
 }
