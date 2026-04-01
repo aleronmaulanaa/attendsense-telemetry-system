@@ -1,303 +1,9 @@
-<!-- <!doctype html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AttendSense - GPS Tracker</title>
-  
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
-  
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <style>
-    :root { --primary: #059669; --primary-dark: #047857; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: "Inter", sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-    
-    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px; text-align: center; position: relative; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .back-button { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 1.2rem; }
-    
-    /* Panel Kontrol di Atas Peta */
-    .control-panel { background: var(--card-bg); padding: 16px; border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
-    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; font-size: 0.85rem; }
-    .info-box { background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); }
-    .info-box strong { display: block; color: var(--primary-dark); margin-bottom: 2px; }
-    
-    button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .btn-start { background: var(--primary); }
-    .btn-start:hover { background: var(--primary-dark); }
-    .btn-stop { background: var(--error); display: none; }
-    
-    /* Container Peta dibuat memenuhi sisa layar */
-    #map { flex: 1; width: 100%; z-index: 1; }
-
-    /* CSS Custom untuk "Bulatan Biru" (Lokasi Saya) */
-    .my-location-dot {
-      width: 20px; height: 20px;
-      background-color: #3b82f6;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-      position: relative;
-    }
-    /* Animasi Radar berkedip di belakang bulatan biru */
-    .my-location-dot::before {
-      content: ''; position: absolute; top: -10px; left: -10px; right: -10px; bottom: -10px;
-      background-color: rgba(59, 130, 246, 0.4); border-radius: 50%;
-      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; z-index: -1;
-    }
-    @keyframes pulse-ring { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
-
-    /* Custom Icon untuk teman (Multiplayer) - Warna Merah */
-    .friend-pin {
-      width: 24px; height: 24px;
-      background-color: #ef4444;
-      border: 3px solid white;
-      border-radius: 50% 50% 50% 0; /* Bentuk Pin Air Mata */
-      transform: rotate(-45deg); /* Mengarahkan ujung ke bawah */
-      box-shadow: -2px 2px 4px rgba(0,0,0,0.3);
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
-    <h1 style="font-size: 1.2rem;"><i class="fas fa-map-marked-alt"></i> Live GPS Tracker</h1>
-  </header>
-
-  <div class="control-panel">
-    <div class="info-grid">
-      <div class="info-box"><strong>Device ID</strong> <span id="lblDevice">Loading...</span></div>
-      <div class="info-box"><strong>Akurasi GPS</strong> <span id="lblAccuracy">Menunggu...</span></div>
-      <div class="info-box"><strong>Latitude</strong> <span id="lblLat">-</span></div>
-      <div class="info-box"><strong>Longitude</strong> <span id="lblLng">-</span></div>
-    </div>
-    
-    <button id="btnStart" class="btn-start" onclick="startTracking()"><i class="fas fa-satellite"></i> Mulai Transmisi Lokasi</button>
-    <button id="btnStop" class="btn-stop" onclick="stopTracking()"><i class="fas fa-stop-circle"></i> Hentikan Transmisi</button>
-  </div>
-
-  <div id="map"></div>
-
-  <script>
-    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
-    const BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
-    
-    // Variabel Global
-    let myDeviceId = "";
-    let watchId = null;
-    let pollingInterval = null;
-    
-    // Variabel Leaflet Map
-    let map;
-    let myPolyline;
-    let markerList = {}; // Menyimpan semua marker agar bisa di-update posisinya
-
-    // 1. Generate / Ambil Device ID
-    function getDeviceId() {
-      let devId = localStorage.getItem("attendsense_device_id");
-      if (!devId) {
-        devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-        localStorage.setItem("attendsense_device_id", devId);
-      }
-      return devId;
-    }
-
-    // 2. Inisialisasi Peta Leaflet (Posisi Default: Pusat Indonesia)
-    function initMap() {
-      map = L.map('map').setView([-2.5489, 118.0148], 5); // Zoom level 5 (Indonesia)
-
-      // Menggunakan Peta OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-
-      // Siapkan Garis (Polyline) untuk jejak perjalanan kita sendiri
-      myPolyline = L.polyline([], {color: '#059669', weight: 4}).addTo(map);
-    }
-
-    // 3. Ikon Kustom sesuai request Dosen
-    // Ikon Bulat Biru (Untuk Diri Sendiri)
-    const myCustomIcon = L.divIcon({
-      className: '',
-      html: '<div class="my-location-dot"></div>',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10] // Titik tengah
-    });
-
-    // Ikon Pin Merah (Untuk Orang Lain)
-    const friendIcon = L.divIcon({
-      className: '',
-      html: '<div class="friend-pin"></div>',
-      iconSize: [24, 24],
-      iconAnchor: [12, 24] // Ujung bawah pin
-    });
-
-
-    // ==========================================
-    // BAGIAN SENSOR (PENGIRIM DATA)
-    // ==========================================
-
-    function startTracking() {
-      if (!navigator.geolocation) {
-        alert("Browser Anda tidak mendukung GPS.");
-        return;
-      }
-
-      document.getElementById("btnStart").style.display = "none";
-      document.getElementById("btnStop").style.display = "flex";
-
-      // Membaca GPS terus menerus (Sensor HP)
-      watchId = navigator.geolocation.watchPosition(
-        position => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          const accuracy = Math.round(position.coords.accuracy);
-
-          // Update UI Text
-          document.getElementById("lblLat").innerText = lat.toFixed(5);
-          document.getElementById("lblLng").innerText = lng.toFixed(5);
-          document.getElementById("lblAccuracy").innerText = `± ${accuracy} meter`;
-
-          // Kirim ke Server
-          sendGPSData(lat, lng, accuracy);
-        },
-        error => {
-          console.error("Error GPS:", error);
-          alert("Gagal membaca GPS. Pastikan izin lokasi aktif.");
-        },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-      );
-
-      // Mulai fitur pemantauan peta (Multiplayer & Jejak)
-      startMultiplayerMap();
-    }
-
-    function stopTracking() {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-      if (pollingInterval) clearInterval(pollingInterval);
-      
-      document.getElementById("btnStart").style.display = "flex";
-      document.getElementById("btnStop").style.display = "none";
-      document.getElementById("lblAccuracy").innerText = "Dihentikan";
-    }
-
-    async function sendGPSData(lat, lng, accuracy) {
-      const payload = {
-        device_id: myDeviceId,
-        ts: new Date().toISOString(),
-        lat: lat,
-        lng: lng,
-        accuracy_m: accuracy
-      };
-
-      try {
-        await fetch(`${BASE_URL}?path=telemetry/gps`, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-      } catch (e) {
-        console.error("Gagal kirim GPS:", e);
-      }
-    }
-
-    // ==========================================
-    // BAGIAN PETA (PENARIK DATA & MULTIPLAYER)
-    // ==========================================
-
-    function startMultiplayerMap() {
-      // Panggil sekali untuk menggambar sejarah jejak perjalanan (Polyline)
-      fetchMyHistory();
-      
-      // Panggil segera untuk melihat teman-teman
-      fetchMultiplayerData();
-      
-      // Lakukan polling setiap 4 detik untuk melihat pergerakan teman
-      pollingInterval = setInterval(fetchMultiplayerData, 4000);
-    }
-
-    // Mengambil lokasi terakhir SEMUA perangkat dari server
-    async function fetchMultiplayerData() {
-      try {
-        const res = await fetch(`${BASE_URL}?path=telemetry/gps/latest`);
-        const json = await res.json();
-        
-        if (json.ok && Array.isArray(json.data)) {
-          let myLocFound = false;
-
-          json.data.forEach(user => {
-            const isMe = (user.device_id === myDeviceId);
-            const latLng = [user.lat, user.lng];
-            
-            // Pilih bentuk icon (Bulat Biru vs Pin Merah)
-            const iconToUse = isMe ? myCustomIcon : friendIcon;
-
-            // Jika marker sudah ada di peta, cukup geser posisinya (animasi mulus)
-            if (markerList[user.device_id]) {
-              markerList[user.device_id].setLatLng(latLng);
-            } 
-            // Jika belum ada, buat marker baru di peta
-            else {
-              const marker = L.marker(latLng, { icon: iconToUse }).addTo(map);
-              // Tambahkan popup kecil jika marker ditekan
-              marker.bindPopup(`<b>${isMe ? "Lokasi Saya" : user.device_id}</b><br>Acc: ±${user.accuracy_m}m`);
-              markerList[user.device_id] = marker;
-            }
-
-            // Jika itu adalah lokasi kita sendiri, arahkan kamera peta (pan/zoom) ke titik tersebut
-            if (isMe && !myLocFound) {
-              map.setView(latLng, 18); // Zoom level 18 (sangat dekat)
-              myLocFound = true;
-            }
-          });
-        }
-      } catch (e) {
-        console.error("Gagal menarik data multiplayer:", e);
-      }
-    }
-
-    // Mengambil jejak perjalanan sendiri (Garis Polyline)
-    async function fetchMyHistory() {
-      try {
-        const res = await fetch(`${BASE_URL}?path=telemetry/gps/history&device_id=${myDeviceId}&limit=50`);
-        const json = await res.json();
-
-        if (json.ok && json.data.items) {
-          const latLngs = [];
-          // Karena data dari server terbalik (lama ke baru), kita langsung masukkan ke array rute
-          json.data.items.forEach(point => {
-            latLngs.push([point.lat, point.lng]);
-          });
-          
-          // Gambar ulang garis merah di peta
-          myPolyline.setLatLngs(latLngs);
-        }
-      } catch (e) {
-        console.error("Gagal menarik history:", e);
-      }
-    }
-
-    // Jalankan saat halaman dibuka
-    window.onload = () => {
-      myDeviceId = getDeviceId();
-      document.getElementById("lblDevice").innerText = myDeviceId;
-      initMap();
-    };
-  </script>
-</body>
-</html>-->
-
-
 <!doctype html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AttendSense - Advanced GPS</title>
+  <title>AttendSense - Peta Google Maps Look</title>
   
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
@@ -309,7 +15,7 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: "Inter", sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; }
     
-    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px; text-align: center; z-index: 1000; }
+    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px; text-align: center; z-index: 1000; position: relative;}
     .back-button { position: absolute; left: 16px; top: 20px; color: white; text-decoration: none; }
     
     .control-panel { background: var(--card-bg); padding: 16px; border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
@@ -325,25 +31,65 @@
     /* Tombol Pusatkan (Floating) */
     .btn-center {
       position: absolute; bottom: 30px; right: 20px; width: 50px; height: 50px;
-      background: white; color: var(--text); border-radius: 50%; z-index: 1000;
+      background: rgba(255,255,255,0.9); color: var(--text); border-radius: 50%; z-index: 1000;
       box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;
-      cursor: pointer; border: 2px solid var(--primary);
+      cursor: pointer; border: 2px solid var(--primary); backdrop-filter: blur(2px);
     }
 
-    /* CSS "Bulatan Biru" + Segitiga Arah */
-    .me-container { position: relative; width: 30px; height: 30px; }
-    .me-dot {
-      width: 18px; height: 18px; background: #3b82f6; border: 3px solid white;
-      border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
-      position: absolute; top: 6px; left: 6px; z-index: 2;
+    /* ==========================================
+       CSS MAREKER "GOOGLE MAPS" (BIRU + KIPAS)
+       ========================================== */
+    .gmap-user-marker {
+      position: relative;
+      width: 40px; height: 40px;
     }
-    .me-arrow {
-      width: 0; height: 0;
-      border-left: 8px solid transparent; border-right: 8px solid transparent;
-      border-bottom: 12px solid #3b82f6; /* Segitiga Biru */
-      position: absolute; top: -10px; left: 7px;
-      transform-origin: bottom center; z-index: 1;
+
+    /* 1. Efek Berdenyut (Halo) di belakang */
+    .map-halo {
+      position: absolute; top: 12px; left: 12px;
+      width: 16px; height: 16px;
+      background: rgba(66, 133, 244, 0.3);
+      border-radius: 50%;
+      z-index: 1;
+      animation: map-pulse 2s infinite;
+    }
+    @keyframes map-pulse {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(3.5); opacity: 0; }
+    }
+
+    /* 2. Sinar Arah (Kipas/Wedge) - Berputar */
+    .map-heading-beam {
+      position: absolute; top: -10px; left: 0px;
+      width: 40px; height: 40px;
+      z-index: 2;
+      /* Membuat bentuk kipas menggunakan clip-path polygon */
+      clip-path: polygon(50% 100%, 15% 0%, 85% 0%);
+      /* Gradient dari biru ke transparan */
+      background: linear-gradient(to top, rgba(66, 133, 244, 0.8) 0%, rgba(66, 133, 244, 0) 100%);
+      transform-origin: 50% 100%; /* Putar di titik bawah kipas (di lokasi dot) */
       transition: transform 0.2s ease;
+    }
+
+    /* 3. Lingkaran Biru Solid di tengah */
+    .map-dot-center {
+      position: absolute; top: 12px; left: 12px;
+      width: 16px; height: 16px;
+      background: #4285F4; /* Biru Google */
+      border: 3px solid white;
+      border-radius: 50%;
+      z-index: 3;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    /* ========================================== */
+
+    /* CSS Custom untuk Teman (Multiplayer) - Warna Oranye agar beda */
+    .friend-dot {
+      width: 14px; height: 14px;
+      background-color: #f97316;
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
   </style>
 </head>
@@ -351,7 +97,7 @@
 
   <header>
     <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
-    <h1 style="font-size: 1.1rem;">AttendSense Live GPS</h1>
+    <h1 style="font-size: 1.1rem;"><i class="fas fa-map-marker-alt"></i> AttendSense GPS</h1>
   </header>
 
   <div class="control-panel">
@@ -371,14 +117,25 @@
   </div>
 
   <script>
+    // MASUKKAN URL DEPLOYMENT BARUMU DI SINI
     const BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
     
-    let myDeviceId = localStorage.getItem("attendsense_device_id") || "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    localStorage.setItem("attendsense_device_id", myDeviceId);
+    let myDeviceId = localStorage.getItem("attendsense_device_id");
+    if (!myDeviceId) {
+      myDeviceId = "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      localStorage.setItem("attendsense_device_id", myDeviceId);
+    }
 
     let map, myMarker, myPolyline, markerList = {};
     let watchId = null, pollingInterval = null;
     let lastLat = 0, lastLng = 0;
+
+    // Custom Icon untuk teman (Multiplayer)
+    const friendIcon = L.divIcon({
+      className: '',
+      html: '<div class="friend-dot"></div>',
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
 
     function initMap() {
       map = L.map('map', { zoomControl: false }).setView([-7.2575, 112.7521], 15);
@@ -386,11 +143,12 @@
       myPolyline = L.polyline([], {color: '#059669', weight: 3, opacity: 0.6}).addTo(map);
     }
 
-    // Fungsi Update Arah Panah (Heading)
+    // Fungsi Update Arah Kipas (Heading)
     function updateHeading(alpha) {
-      const arrow = document.querySelector('.me-arrow');
-      if (arrow) {
-        arrow.style.transform = `rotate(${alpha}deg)`;
+      const beam = document.querySelector('.map-heading-beam');
+      if (beam) {
+        // Kita rotate element yang berisi kipas
+        beam.style.transform = `rotate(${alpha}deg)`;
       }
     }
 
@@ -432,20 +190,34 @@
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 } // Timeout diperlama ke 15 detik
       );
 
-      pollingInterval = setInterval(fetchOthers, 5000);
+      // Mulai tarik history (Polyline)
+      fetchMyHistory();
+      // Polling multiplayer
+      setInterval(fetchOthers, 5000);
     }
 
+    // Update Marker Saya (HTML Google Maps Look)
     function updateMyMarker(lat, lng) {
       const latLng = [lat, lng];
       if (!myMarker) {
+        // HTML Structure sesuai request
         const myIcon = L.divIcon({
           className: '',
-          html: '<div class="me-container"><div class="me-arrow"></div><div class="me-dot"></div></div>',
-          iconSize: [30, 30], iconAnchor: [15, 15]
+          html: `
+            <div class="gmap-user-marker">
+              <div class="map-halo"></div>
+              <div class="map-heading-beam"></div>
+              <div class="map-dot-center"></div>
+            </div>
+          `,
+          iconSize: [40, 40], iconAnchor: [20, 20] // Ukuran container kustom
         });
-        myMarker = L.marker(latLng, { icon: myIcon }).addTo(map);
+        myMarker = L.marker(latLng, { icon: myIcon, zIndexOffset: 1000 }).addTo(map);
+        map.setView(latLng, 18); // Autofocus pertama kali
       } else {
         myMarker.setLatLng(latLng);
+        // Kembalikan opasitas jika sebelumnya dihentikan
+        if (myMarker.options.opacity !== 1) myMarker.setOpacity(1);
       }
     }
 
@@ -463,17 +235,27 @@
       } catch (e) { console.error(e); }
     }
 
+    async function fetchMyHistory() {
+      try {
+        const res = await fetch(`${BASE_URL}?path=telemetry/gps/history&device_id=${myDeviceId}&limit=50`);
+        const json = await res.json();
+        if (json.ok) {
+          myPolyline.setLatLngs(json.data.items.map(p => [p.lat, p.lng]));
+        }
+      } catch (e) { console.error(e); }
+    }
+
     async function fetchOthers() {
       try {
         const res = await fetch(`${BASE_URL}?path=telemetry/gps/latest`);
         const json = await res.json();
-        if (json.ok) {
+        if (json.ok && Array.isArray(json.data)) {
           json.data.forEach(user => {
             if (user.device_id === myDeviceId) return;
             if (markerList[user.device_id]) {
               markerList[user.device_id].setLatLng([user.lat, user.lng]);
             } else {
-              markerList[user.device_id] = L.marker([user.lat, user.lng]).addTo(map).bindPopup(user.device_id);
+              markerList[user.device_id] = L.marker([user.lat, user.lng], { icon: friendIcon }).addTo(map).bindPopup(user.device_id);
             }
           });
         }
@@ -482,11 +264,10 @@
 
     function stopTracking() {
       if (watchId) navigator.geolocation.clearWatch(watchId);
-      clearInterval(pollingInterval);
       document.getElementById("btnStart").style.display = "flex";
       document.getElementById("btnStop").style.display = "none";
       document.getElementById("lblStatus").innerText = "Transmisi Berhenti";
-      // Redupkan Marker Saya (UX Advice)
+      // Redupkan Marker Saya (UX)
       if (myMarker) myMarker.setOpacity(0.5);
     }
 

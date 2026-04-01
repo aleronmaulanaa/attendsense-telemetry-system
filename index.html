@@ -308,11 +308,11 @@
           <p>Telemetri sensor gerak realtime dengan grafik ApexCharts.</p>
         </div>
         
-        <a href="client/gps/map.html" class="feature-card">
-          <i class="fas fa-map-marked-alt"></i>
-          <h3>GPS Tracker</h3>
-          <p>Pelacakan lokasi live, rekam jejak, dan peta multiplayer.</p>
-        </a>
+        <div class="feature-card" onclick="openModal('gpsModal')">
+  <i class="fas fa-map-marker-alt"></i>
+  <h3>GPS Tracker</h3>
+  <p>Pelacakan lokasi live, rekam jejak, dan peta multiplayer.</p>
+</div>
       </div>
     </div>
 
@@ -347,6 +347,22 @@
         </div>
       </div>
     </div>
+
+    <div id="gpsModal" class="modal-overlay">
+  <div class="modal-content">
+    <button class="close-btn" onclick="closeModal('gpsModal')">&times;</button>
+    <h2>Pilih Peran GPS</h2>
+    <p>Tentukan antarmuka GPS yang ingin dibuka.</p>
+    <div class="role-buttons">
+      <a href="client/gps/client.html" class="btn btn-primary">
+        <i class="fas fa-satellite-dish"></i> Masuk sebagai Client (Sender)
+      </a>
+      <a href="client/gps/admin.html" class="btn btn-secondary" style="border-color: #059669; color: #059669;">
+        <i class="fas fa-map-marked-alt"></i> Masuk sebagai Admin (Monitor)
+      </a>
+    </div>
+  </div>
+</div>
 
     <script>
       // Fungsi untuk membuka modal
