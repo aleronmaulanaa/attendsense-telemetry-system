@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
@@ -287,6 +287,210 @@
       document.getElementById("lblDevice").innerText = myDeviceId;
       initMap();
     };
+  </script>
+</body>
+</html>-->
+
+
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AttendSense - Advanced GPS</title>
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root { --primary: #059669; --primary-dark: #047857; --bg: #f8fafc; --card-bg: #ffffff; --text: #1e293b; --text-light: #64748b; --border: #e2e8f0; --success: #10b981; --error: #ef4444; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Inter", sans-serif; background: var(--bg); height: 100vh; display: flex; flex-direction: column; }
+    
+    header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 16px; text-align: center; z-index: 1000; }
+    .back-button { position: absolute; left: 16px; top: 20px; color: white; text-decoration: none; }
+    
+    .control-panel { background: var(--card-bg); padding: 16px; border-bottom: 1px solid var(--border); z-index: 1000; position: relative; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .info-box { background: #f1f5f9; padding: 6px 10px; border-radius: 8px; font-size: 0.75rem; border: 1px solid var(--border); }
+    
+    button { width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-start { background: var(--primary); }
+    .btn-stop { background: var(--error); display: none; }
+
+    #map { flex: 1; width: 100%; z-index: 1; }
+
+    /* Tombol Pusatkan (Floating) */
+    .btn-center {
+      position: absolute; bottom: 30px; right: 20px; width: 50px; height: 50px;
+      background: white; color: var(--text); border-radius: 50%; z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; border: 2px solid var(--primary);
+    }
+
+    /* CSS "Bulatan Biru" + Segitiga Arah */
+    .me-container { position: relative; width: 30px; height: 30px; }
+    .me-dot {
+      width: 18px; height: 18px; background: #3b82f6; border: 3px solid white;
+      border-radius: 50%; box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+      position: absolute; top: 6px; left: 6px; z-index: 2;
+    }
+    .me-arrow {
+      width: 0; height: 0;
+      border-left: 8px solid transparent; border-right: 8px solid transparent;
+      border-bottom: 12px solid #3b82f6; /* Segitiga Biru */
+      position: absolute; top: -10px; left: 7px;
+      transform-origin: bottom center; z-index: 1;
+      transition: transform 0.2s ease;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a href="../../index.html" class="back-button"><i class="fas fa-arrow-left"></i></a>
+    <h1 style="font-size: 1.1rem;">AttendSense Live GPS</h1>
+  </header>
+
+  <div class="control-panel">
+    <div class="info-grid">
+      <div class="info-box"><strong>Lat:</strong> <span id="lblLat">-</span></div>
+      <div class="info-box"><strong>Lng:</strong> <span id="lblLng">-</span></div>
+      <div class="info-box" style="grid-column: span 2;"><strong>Status:</strong> <span id="lblStatus">Siap</span></div>
+    </div>
+    <button id="btnStart" class="btn-start" onclick="startTracking()"><i class="fas fa-play"></i> Mulai Transmisi</button>
+    <button id="btnStop" class="btn-stop" onclick="stopTracking()"><i class="fas fa-stop"></i> Hentikan</button>
+  </div>
+
+  <div id="map"></div>
+  
+  <div class="btn-center" onclick="centerToMe()" title="Pusatkan ke lokasi saya">
+    <i class="fas fa-crosshairs fa-lg"></i>
+  </div>
+
+  <script>
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
+    
+    let myDeviceId = localStorage.getItem("attendsense_device_id") || "DEV-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    localStorage.setItem("attendsense_device_id", myDeviceId);
+
+    let map, myMarker, myPolyline, markerList = {};
+    let watchId = null, pollingInterval = null;
+    let lastLat = 0, lastLng = 0;
+
+    function initMap() {
+      map = L.map('map', { zoomControl: false }).setView([-7.2575, 112.7521], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      myPolyline = L.polyline([], {color: '#059669', weight: 3, opacity: 0.6}).addTo(map);
+    }
+
+    // Fungsi Update Arah Panah (Heading)
+    function updateHeading(alpha) {
+      const arrow = document.querySelector('.me-arrow');
+      if (arrow) {
+        arrow.style.transform = `rotate(${alpha}deg)`;
+      }
+    }
+
+    function startTracking() {
+      // Minta izin sensor arah (khusus iOS 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission();
+      }
+      
+      // Dengarkan Sensor Kompas HP
+      window.addEventListener('deviceorientation', (e) => {
+        let heading = e.alpha; 
+        if (e.webkitCompassHeading) heading = e.webkitCompassHeading; // Support iOS
+        if (heading) updateHeading(heading);
+      });
+
+      document.getElementById("btnStart").style.display = "none";
+      document.getElementById("btnStop").style.display = "block";
+      document.getElementById("lblStatus").innerText = "Mencari Sinyal...";
+
+      watchId = navigator.geolocation.watchPosition(
+        pos => {
+          lastLat = pos.coords.latitude;
+          lastLng = pos.coords.longitude;
+          document.getElementById("lblLat").innerText = lastLat.toFixed(5);
+          document.getElementById("lblLng").innerText = lastLng.toFixed(5);
+          document.getElementById("lblStatus").innerText = `Akurasi: ±${Math.round(pos.coords.accuracy)}m`;
+          
+          updateMyMarker(lastLat, lastLng);
+          sendGPS(lastLat, lastLng, pos.coords.accuracy);
+        },
+        err => {
+          let msg = "Gagal baca GPS.";
+          if (err.code === 1) msg = "Izin lokasi ditolak browser.";
+          if (err.code === 3) msg = "Waktu habis (Sinyal Lemah).";
+          document.getElementById("lblStatus").innerText = msg;
+          alert(msg + " Pastikan GPS Sistem HP AKTIF.");
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 } // Timeout diperlama ke 15 detik
+      );
+
+      pollingInterval = setInterval(fetchOthers, 5000);
+    }
+
+    function updateMyMarker(lat, lng) {
+      const latLng = [lat, lng];
+      if (!myMarker) {
+        const myIcon = L.divIcon({
+          className: '',
+          html: '<div class="me-container"><div class="me-arrow"></div><div class="me-dot"></div></div>',
+          iconSize: [30, 30], iconAnchor: [15, 15]
+        });
+        myMarker = L.marker(latLng, { icon: myIcon }).addTo(map);
+      } else {
+        myMarker.setLatLng(latLng);
+      }
+    }
+
+    function centerToMe() {
+      if (lastLat !== 0) map.panTo([lastLat, lastLng]);
+      else alert("Lokasi belum ditemukan.");
+    }
+
+    async function sendGPS(lat, lng, acc) {
+      try {
+        await fetch(`${BASE_URL}?path=telemetry/gps`, {
+          method: "POST",
+          body: JSON.stringify({ device_id: myDeviceId, ts: new Date().toISOString(), lat, lng, accuracy_m: acc })
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    async function fetchOthers() {
+      try {
+        const res = await fetch(`${BASE_URL}?path=telemetry/gps/latest`);
+        const json = await res.json();
+        if (json.ok) {
+          json.data.forEach(user => {
+            if (user.device_id === myDeviceId) return;
+            if (markerList[user.device_id]) {
+              markerList[user.device_id].setLatLng([user.lat, user.lng]);
+            } else {
+              markerList[user.device_id] = L.marker([user.lat, user.lng]).addTo(map).bindPopup(user.device_id);
+            }
+          });
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function stopTracking() {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      clearInterval(pollingInterval);
+      document.getElementById("btnStart").style.display = "flex";
+      document.getElementById("btnStop").style.display = "none";
+      document.getElementById("lblStatus").innerText = "Transmisi Berhenti";
+      // Redupkan Marker Saya (UX Advice)
+      if (myMarker) myMarker.setOpacity(0.5);
+    }
+
+    window.onload = initMap;
   </script>
 </body>
 </html>
