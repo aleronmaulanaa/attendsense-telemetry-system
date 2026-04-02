@@ -20,7 +20,7 @@
       header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 32px 24px; text-align: center; box-shadow: var(--shadow-lg); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
       header h1 { font-size: 2rem; font-weight: 700; }
       .container { max-width: 600px; margin: 0 auto; padding: 48px 24px; }
-      .card { background: var(--card-bg); padding: 32px; border-radius: 24px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); }
+      .card { background: var(--card-bg); padding: 32px; border-radius: 24px; box-shadow: var(--shadow-md); display: flex; flex-direction: column; border: 1px solid var(--border); margin-bottom: 24px; }
       .card h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
       .card h2 i { color: var(--primary); font-size: 1.25rem; }
       input { width: 100%; padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; font-size: 1rem; }
@@ -32,6 +32,11 @@
       .info { color: var(--info); background: rgba(2, 132, 199, 0.1); }
       .error { color: var(--error); background: rgba(239, 68, 68, 0.1); }
       #reader { width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); }
+      
+      /* Tambahan style untuk card setting */
+      .settings-card { padding: 24px; background: #f8fafc; border: 1px dashed var(--primary); }
+      .settings-card h2 { font-size: 1.25rem; color: var(--primary-dark); margin-bottom: 8px; }
+      .settings-desc { font-size: 0.85rem; color: var(--text-light); margin-bottom: 16px; line-height: 1.5; }
     </style>
   </head>
   <body>
@@ -40,6 +45,13 @@
     </header>
 
     <div class="container">
+      
+      <div class="card settings-card">
+        <h2><i class="fas fa-network-wired"></i> Konfigurasi Jaringan</h2>
+        <p class="settings-desc">Kosongkan untuk absen ke server kelas utama. Isi dengan URL Apps Script kelompok lain jika dosen meminta uji coba server silang.</p>
+        <input type="text" id="customEndpoint" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom: 0;" />
+      </div>
+
       <div class="card">
         <h2><i class="fas fa-camera"></i>Scan Kehadiran</h2>
         <input type="text" id="scanUserId" placeholder="Masukkan NIM (Hanya Angka)" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
@@ -54,8 +66,15 @@
     </div>
 
     <script>
-      const BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
+      // URL Default milikmu
+      const DEFAULT_BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
       let html5QrcodeScanner = null;
+
+      // Fungsi Cerdas Penentu URL
+      function getBaseUrl() {
+        const customUrl = document.getElementById("customEndpoint").value.trim();
+        return customUrl ? customUrl : DEFAULT_BASE_URL;
+      }
 
       function getDeviceId() {
         let devId = localStorage.getItem("attendsense_device_id");
@@ -88,7 +107,8 @@
         };
 
         try {
-          const response = await fetch(`${BASE_URL}?path=presence/checkin`, {
+          // MENGGUNAKAN getBaseUrl() BUKAN BASE_URL
+          const response = await fetch(`${getBaseUrl()}?path=presence/checkin`, {
             method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload),
           });
@@ -114,7 +134,7 @@
             }
           }
         } catch (error) {
-          statusEl.innerText = "Error server.";
+          statusEl.innerText = "Error server. Pastikan URL kelompok lain valid.";
           statusEl.className = "status-text error";
         } finally {
           document.getElementById("btnRestartScan").style.display = "block";
