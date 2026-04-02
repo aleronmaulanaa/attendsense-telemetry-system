@@ -3,78 +3,222 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AttendSense - Admin Map</title>
+  <title>AttendSense - Admin GPS Monitor</title>
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: sans-serif; }
-    header { background: #059669; color: white; padding: 15px; text-align: center; z-index: 1000; }
-    #map { flex: 1; z-index: 1; }
-    .controls { position: absolute; top: 80px; right: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 200px; }
-    select, button { width: 100%; margin-top: 10px; padding: 8px; cursor: pointer; }
 
-    /* CSS Pin Teman (Admin View) */
-    .friend-pin { width: 12px; height: 12px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.3); }
+  <style>
+    :root { 
+      --primary: #059669; 
+      --primary-dark: #047857;
+      --active-color: #2563eb; /* Biru untuk status aktif */
+      --bg: #f8fafc; 
+      --text: #1e293b; 
+    }
+    
+    body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Inter', sans-serif; }
+    header { background: var(--primary); color: white; padding: 15px; text-align: center; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    #map { flex: 1; z-index: 1; }
+
+    /* Panel Kontrol */
+    .admin-controls {
+      position: absolute; top: 80px; left: 10px; z-index: 1000;
+      background: white; padding: 15px; border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 240px;
+      border: 1px solid #e2e8f0;
+    }
+
+    select, button { 
+      width: 100%; margin-top: 10px; padding: 10px; 
+      border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;
+    }
+
+    button { cursor: pointer; font-weight: 600; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    /* Warna Tombol Berdasarkan Status */
+    .btn-history { background: #f1f5f9; color: var(--text); }
+    .btn-history.active { background: var(--active-color); color: white; border-color: var(--active-color); }
+    .btn-history:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .btn-center { background: white; color: var(--primary); border: 2px solid var(--primary); }
+    .btn-center:hover { background: #f0fdf4; }
+
+    /* Loading Spinner */
+    .spinner {
+      animation: rotate 1s linear infinite;
+      display: none; /* Sembunyi secara default */
+    }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+    /* Marker User Lain */
+    .user-dot {
+      width: 12px; height: 12px; background: #f97316;
+      border: 2px solid white; border-radius: 50%;
+      box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
-  <header>Dashboard Admin - Realtime GPS Monitoring</header>
-  
-  <div class="controls">
-    <small>Pantau Perangkat:</small>
-    <select id="deviceList"><option value="">-- Semua Perangkat --</option></select>
-    <button onclick="drawHistory()" style="background: #059669; color: white; border: none;">Lihat Jejak (Polyline)</button>
-    <button onclick="clearMap()" style="margin-top:5px;">Bersihkan Peta</button>
-  </div>
+
+  <header>
+    <h1 style="font-size: 1.2rem;">GPS Monitoring System</h1>
+  </header>
 
   <div id="map"></div>
 
+  <div class="admin-controls">
+    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Pilih Perangkat:</label>
+    <select id="deviceList">
+      <option value="">-- Semua Perangkat --</option>
+    </select>
+
+    <button id="btnCenter" class="btn-center" onclick="centerToDevice()">
+      <i class="fas fa-crosshairs"></i> Pusatkan Kamera
+    </button>
+
+    <button id="btnHistory" class="btn-history" onclick="toggleHistory()">
+      <i id="histIcon" class="fas fa-route"></i>
+      <i id="histLoading" class="fas fa-spinner spinner"></i>
+      <span id="histText">Lihat Jejak (Polyline)</span>
+    </button>
+
+    <button onclick="resetView()" style="background: #f8fafc; color: #ef4444; border: 1px solid #fecaca; font-size: 0.8rem;">
+      Reset / Bersihkan Peta
+    </button>
+  </div>
+
   <script>
     const BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
-    let map, markerList = {}, polyline;
+    
+    let map, polyline;
+    let markerList = {}; 
+    let isTrackingHistory = false;
+    let trackedDeviceId = "";
 
     function init() {
-      map = L.map('map').setView([-7.2575, 112.7521], 13);
+      map = L.map('map', { zoomControl: false }).setView([-7.2575, 112.7521], 13);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      polyline = L.polyline([], {color: '#059669', weight: 4}).addTo(map);
+      
+      // Polyline Utama (Garis Hijau)
+      polyline = L.polyline([], {color: '#2563eb', weight: 4, opacity: 0.8, dashArray: '5, 10'}).addTo(map);
+      
+      // Polling data setiap 5 detik
+      updateMarkers();
       setInterval(updateMarkers, 5000);
     }
 
     async function updateMarkers() {
-      const res = await fetch(`${BASE_URL}?path=telemetry/gps/latest`);
-      const json = await res.json();
-      if (json.ok) {
-        const select = document.getElementById("deviceList");
-        json.data.forEach(u => {
-          // Update Dropdown
-          if (![...select.options].some(o => o.value === u.device_id)) {
-            select.add(new Option(u.device_id, u.device_id));
-          }
+      try {
+        const res = await fetch(`${BASE_URL}?path=telemetry/gps/latest`);
+        const json = await res.json();
+        
+        if (json.ok && Array.isArray(json.data)) {
+          const select = document.getElementById("deviceList");
 
-          // Update/Create Marker
-          if (markerList[u.device_id]) {
-            markerList[u.device_id].setLatLng([u.lat, u.lng]);
-          } else {
-            const icon = L.divIcon({ className: '', html: '<div class="friend-pin"></div>', iconSize: [12, 12] });
-            markerList[u.device_id] = L.marker([u.lat, u.lng], {icon}).addTo(map).bindPopup(u.device_id);
-          }
-        });
+          json.data.forEach(user => {
+            // Tambahkan ke dropdown jika belum ada
+            if (![...select.options].some(o => o.value === user.device_id)) {
+              select.add(new Option(user.device_id, user.device_id));
+            }
+
+            const latLng = [user.lat, user.lng];
+
+            // Update atau Buat Marker
+            if (markerList[user.device_id]) {
+              markerList[user.device_id].setLatLng(latLng);
+            } else {
+              const icon = L.divIcon({ className: '', html: '<div class="user-dot"></div>', iconSize: [12, 12] });
+              markerList[user.device_id] = L.marker(latLng, { icon }).addTo(map).bindPopup(`<b>${user.device_id}</b>`);
+            }
+
+            // FITUR LIVE POLYLINE: 
+            // Jika admin sedang melacak jejak device ini, tambahkan titik baru ke garis secara otomatis
+            if (isTrackingHistory && user.device_id === trackedDeviceId) {
+              polyline.addLatLng(latLng);
+            }
+          });
+        }
+      } catch (e) { console.error("Update error:", e); }
+    }
+
+    async function toggleHistory() {
+      const devId = document.getElementById("deviceList").value;
+      if (!devId) return alert("Pilih perangkat yang ingin dilihat jejaknya terlebih dahulu!");
+
+      const btn = document.getElementById("btnHistory");
+      const text = document.getElementById("histText");
+      const loader = document.getElementById("histLoading");
+      const icon = document.getElementById("histIcon");
+
+      // Jika sedang aktif, maka matikan
+      if (isTrackingHistory) {
+        stopHistoryMode();
+        return;
+      }
+
+      // Aktifkan Mode Loading
+      btn.disabled = true;
+      loader.style.display = "block";
+      icon.style.display = "none";
+      text.innerText = "Mengambil Data...";
+
+      try {
+        const res = await fetch(`${BASE_URL}?path=telemetry/gps/history&device_id=${devId}&limit=100`);
+        const json = await res.json();
+        
+        if (json.ok) {
+          const points = json.data.items.map(p => [p.lat, p.lng]);
+          polyline.setLatLngs(points);
+          
+          if (points.length > 0) map.fitBounds(polyline.getBounds());
+
+          // Aktifkan Mode Tracking
+          isTrackingHistory = true;
+          trackedDeviceId = devId;
+          
+          btn.classList.add("active");
+          text.innerText = "Tracking Jejak: ON";
+        }
+      } catch (e) { 
+        alert("Gagal mengambil data history."); 
+        stopHistoryMode();
+      } finally {
+        btn.disabled = false;
+        loader.style.display = "none";
+        icon.style.display = "block";
       }
     }
 
-    async function drawHistory() {
-      const id = document.getElementById("deviceList").value;
-      if (!id) return alert("Pilih device dulu!");
-      const res = await fetch(`${BASE_URL}?path=telemetry/gps/history&device_id=${id}&limit=100`);
-      const json = await res.json();
-      if (json.ok) {
-        const pts = json.data.items.map(i => [i.lat, i.lng]);
-        polyline.setLatLngs(pts);
-        map.fitBounds(polyline.getBounds());
+    function stopHistoryMode() {
+      isTrackingHistory = false;
+      trackedDeviceId = "";
+      const btn = document.getElementById("btnHistory");
+      btn.classList.remove("active");
+      document.getElementById("histText").innerText = "Lihat Jejak (Polyline)";
+      polyline.setLatLngs([]); // Bersihkan garis
+    }
+
+    function centerToDevice() {
+      const devId = document.getElementById("deviceList").value;
+      if (!devId) return alert("Pilih perangkat untuk dipusatkan.");
+
+      if (markerList[devId]) {
+        map.panTo(markerList[devId].getLatLng(), { animate: true });
+        map.setZoom(18);
+        markerList[devId].openPopup();
+      } else {
+        alert("Data posisi belum tersedia.");
       }
     }
 
-    function clearMap() { polyline.setLatLngs([]); }
+    function resetView() {
+      stopHistoryMode();
+      map.setView([-7.2575, 112.7521], 13);
+    }
+
     window.onload = init;
   </script>
 </body>
