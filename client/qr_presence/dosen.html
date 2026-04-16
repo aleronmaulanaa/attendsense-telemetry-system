@@ -55,8 +55,8 @@
       
       <div class="card settings-card">
         <h2><i class="fas fa-server"></i> Pengaturan Endpoint (Universal Client)</h2>
-        <p class="settings-desc">Kosongkan kolom ini untuk menggunakan server Anda sendiri. Isi dengan URL Apps Script milik kelompok lain jika ingin menguji transmisi data ke server mereka.</p>
-        <input type="text" id="customEndpoint" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom: 0;" />
+        <p class="settings-desc">Ganti URL ini dengan URL Apps Script milik kelompok lain jika ingin menguji transmisi data ke server mereka (Swap Test).</p>
+        <input type="text" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec" style="margin-bottom: 0;" />
       </div>
 
       <div class="dashboard-grid">
@@ -84,14 +84,10 @@
     </div>
 
     <script>
-      // URL Default milikmu
-      const DEFAULT_BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
       let qrIntervalId = null;
 
-      // Fungsi Cerdas untuk menentukan URL mana yang dipakai
       function getBaseUrl() {
-        const customUrl = document.getElementById("customEndpoint").value.trim();
-        return customUrl ? customUrl : DEFAULT_BASE_URL;
+        return document.getElementById("customEndpoint").value.trim();
       }
 
       function startAutoGenerate() {
@@ -104,7 +100,6 @@
         document.getElementById("genCourseId").disabled = true;
         document.getElementById("genSessionId").disabled = true;
         document.getElementById("genMaxCapacity").disabled = true;
-        // Kunci juga input server saat sesi berjalan
         document.getElementById("customEndpoint").disabled = true; 
 
         document.getElementById("btnGenerate").innerText = "Sesi Berjalan (Ganti tiap 25s)...";
@@ -149,16 +144,24 @@
         };
 
         try {
-          // MENGGUNAKAN getBaseUrl() BUKAN BASE_URL
           const response = await fetch(`${getBaseUrl()}?path=presence/qr/generate`, {
             method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload),
           });
           const result = await response.json();
+          
           if (result.ok) {
             statusEl.innerText = `Token: ${result.data.qr_token}\n(Berlaku 25s, Kuota: ${maxCap})`;
             statusEl.className = "status-text success";
-            new QRCode(qrContainer, { text: result.data.qr_token, width: 200, height: 200 });
+            
+            // PERBAIKAN: QR Code kini memuat 3 Data (JSON)
+            const qrPayload = JSON.stringify({
+              qr_token: result.data.qr_token,
+              course_id: courseId,
+              session_id: sessionId
+            });
+            
+            new QRCode(qrContainer, { text: qrPayload, width: 200, height: 200 });
             
             document.getElementById("listCourseId").value = courseId;
             document.getElementById("listSessionId").value = sessionId;
@@ -168,7 +171,7 @@
             statusEl.className = "status-text error";
           }
         } catch (error) {
-          statusEl.innerText = "Error Jaringan. Memastikan URL Server benar...";
+          statusEl.innerText = "Error Jaringan. Pastikan URL Server valid.";
           statusEl.className = "status-text error";
         }
       }
@@ -181,7 +184,6 @@
         if (listEl.innerHTML.includes("Mengambil data")) return;
 
         try {
-          // MENGGUNAKAN getBaseUrl() BUKAN BASE_URL
           const response = await fetch(`${getBaseUrl()}?path=presence/list&course_id=${courseId}&session_id=${sessionId}`);
           const result = await response.json();
 

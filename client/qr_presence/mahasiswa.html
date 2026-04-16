@@ -48,16 +48,16 @@
       
       <div class="card settings-card">
         <h2><i class="fas fa-network-wired"></i> Konfigurasi Jaringan</h2>
-        <p class="settings-desc">Kosongkan untuk absen ke server kelas utama. Isi dengan URL Apps Script kelompok lain jika dosen meminta uji coba server silang.</p>
-        <input type="text" id="customEndpoint" placeholder="https://script.google.com/macros/s/.../exec" style="margin-bottom: 0;" />
+        <p class="settings-desc">Ganti URL ini dengan URL Apps Script kelompok lain jika dosen meminta uji coba server silang.</p>
+        <input type="text" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec" style="margin-bottom: 0;" />
       </div>
 
       <div class="card">
         <h2><i class="fas fa-camera"></i>Scan Kehadiran</h2>
         <input type="text" id="scanUserId" placeholder="Masukkan NIM (Hanya Angka)" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required />
         
-        <input type="text" id="genCourseId" placeholder="Course ID (Diberikan Dosen)" value="cloud-101" />
-        <input type="text" id="genSessionId" placeholder="Session ID (Diberikan Dosen)" value="sesi-02" />
+        <input type="text" id="genCourseId" placeholder="Course ID (Opsional jika QR Pintar)" value="" />
+        <input type="text" id="genSessionId" placeholder="Session ID (Opsional jika QR Pintar)" value="" />
 
         <div id="reader"></div>
         <p id="scanStatus" class="status-text"></p>
@@ -66,14 +66,10 @@
     </div>
 
     <script>
-      // URL Default milikmu
-      const DEFAULT_BASE_URL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
       let html5QrcodeScanner = null;
 
-      // Fungsi Cerdas Penentu URL
       function getBaseUrl() {
-        const customUrl = document.getElementById("customEndpoint").value.trim();
-        return customUrl ? customUrl : DEFAULT_BASE_URL;
+        return document.getElementById("customEndpoint").value.trim();
       }
 
       function getDeviceId() {
@@ -87,8 +83,6 @@
 
       async function onScanSuccess(decodedText) {
         const userId = document.getElementById("scanUserId").value.trim();
-        const courseId = document.getElementById("genCourseId").value.trim();
-        const sessionId = document.getElementById("genSessionId").value.trim();
         const statusEl = document.getElementById("scanStatus");
 
         if (!userId) {
@@ -101,13 +95,38 @@
         statusEl.innerText = "Memproses...";
         statusEl.className = "status-text";
 
+        // PERBAIKAN: Fallback Logika Pemindaian
+        let finalToken = decodedText;
+        let finalCourseId = document.getElementById("genCourseId").value.trim();
+        let finalSessionId = document.getElementById("genSessionId").value.trim();
+
+        // Coba parsing QR sebagai JSON (jika QR buatan kelompok kita sendiri)
+        try {
+          const parsedQR = JSON.parse(decodedText);
+          if (parsedQR.qr_token) {
+            finalToken = parsedQR.qr_token;
+            finalCourseId = parsedQR.course_id || finalCourseId;
+            finalSessionId = parsedQR.session_id || finalSessionId;
+            
+            // Otomatis isikan ke kotak input agar mahasiswa melihat keajaibannya
+            document.getElementById("genCourseId").value = finalCourseId;
+            document.getElementById("genSessionId").value = finalSessionId;
+          }
+        } catch (e) {
+          // Jika error parse JSON, artinya ini QR dari kelompok lain yang cuma berisi string token
+          // Aplikasi akan tetap memprosesnya dengan mengambil Course ID & Session ID dari inputan manual
+        }
+
         const payload = {
-          user_id: userId, device_id: getDeviceId(), course_id: courseId, session_id: sessionId,
-          qr_token: decodedText, ts: new Date().toISOString(),
+          user_id: userId, 
+          device_id: getDeviceId(), 
+          course_id: finalCourseId, 
+          session_id: finalSessionId,
+          qr_token: finalToken, 
+          ts: new Date().toISOString(),
         };
 
         try {
-          // MENGGUNAKAN getBaseUrl() BUKAN BASE_URL
           const response = await fetch(`${getBaseUrl()}?path=presence/checkin`, {
             method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload),
@@ -119,14 +138,15 @@
             statusEl.className = "status-text success";
             document.getElementById("scanUserId").value = "";
           } else {
+            // ... Penanganan error UI sama
             if (result.error === "session_limit_reached") {
               statusEl.innerText = "Gagal: Kuota kelas sesi ini sudah penuh!";
               statusEl.className = "status-text error";
             } else if (result.error === "already_checked_in") {
-              statusEl.innerText = "Info: Anda sudah berhasil absen di sesi ini sebelumnya.";
+              statusEl.innerText = "Info: Anda sudah berhasil absen sebelumnya.";
               statusEl.className = "status-text info";
             } else if (result.error === "token_expired") {
-              statusEl.innerText = "Gagal: QR Code sudah kedaluwarsa. Tunggu QR berikutnya!";
+              statusEl.innerText = "Gagal: QR Code sudah kedaluwarsa.";
               statusEl.className = "status-text error";
             } else {
               statusEl.innerText = `Gagal: ${result.error}`;
