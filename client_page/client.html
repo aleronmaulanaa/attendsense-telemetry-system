@@ -778,7 +778,12 @@ function applyEndpoint(dummyArg) {
 let html5QrcodeScanner = null;
 
 function getBaseUrlQR() {
-  return document.getElementById("customEndpoint").value.trim();
+  let url = document.getElementById("customEndpoint").value.trim();
+  // Menghapus garis miring di akhir jika ada
+  if(url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  return url;
 }
 
 async function onScanSuccess(decodedText) {

@@ -645,7 +645,14 @@ if (endpointInput && applyBtn) {
 }
 
 function applyEndpoint(dummy) { currentEndpoint = endpointInput.value; applyBtn.disabled = true; }
-function getAdminBaseUrl() { return document.getElementById("endpointInputA").value.trim(); }
+function getAdminBaseUrl() { 
+  let url = document.getElementById("endpointInputA").value.trim(); 
+  // Menghapus garis miring di akhir jika pengguna tidak sengaja mengetiknya
+  if(url.endsWith('/')) {
+    url = url.slice(0, -1);
+  }
+  return url;
+}
 
 // --- Dummy Charts Base Admin Home ---
 function initCharts(){drawBarChart();drawLineChart();}
