@@ -426,7 +426,7 @@
         <div class="card" style="border: 1px dashed var(--accent); background: var(--accent-soft);">
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28" style="color:var(--accent)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Konfigurasi Server Presensi</h2>
           <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; line-height: 1.6;">Ganti URL di bawah ini dengan URL Apps Script milik kelompok lain jika dosen meminta Anda untuk melakukan uji coba *Cross-Server* (Swap Test).</p>
-          <input type="text" class="input-themed" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec" style="margin-bottom: 0;" />
+          <input type="text" class="input-themed" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbwoupp-fQboYmJ-b69teP3EZPs4Bjq7m0sY3uERl88qbD1nz4T2r6klj5sDKDWaYN6p/exec" style="margin-bottom: 0;" />
         </div>
 
         <div class="card">
@@ -561,7 +561,7 @@
           <p class="setting-desc">Simpan endpoint Google Apps Script baru jika ingin mengganti tujuan database.</p>
           <div style="padding-left: 64px;">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec">
+              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbwoupp-fQboYmJ-b69teP3EZPs4Bjq7m0sY3uERl88qbD1nz4T2r6klj5sDKDWaYN6p/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnC" disabled onclick="applyEndpoint('C')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -753,7 +753,7 @@ function switchView(view){
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function handleLogout(){ window.location.href = 'login.html'; }
+function handleLogout(){ window.location.href = '../login.html'; }
 
 // Setting Endpoint Logic
 const endpointInput = document.getElementById('endpointInputC');
@@ -820,7 +820,7 @@ async function onScanSuccess(decodedText) {
   };
 
   try {
-    const response = await fetch(`${getBaseUrlQR()}?path=presence/checkin`, {
+    const response = await fetch(`${getBaseUrlQR()}/presence/checkin`, {
       method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
     });
@@ -869,7 +869,7 @@ function restartScanner() {
 // ==========================================
 // 3. LOGIC: ACCELEROMETER
 // ==========================================
-const BASE_URL_ACCEL = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
+const BASE_URL_ACCEL = "https://script.google.com/macros/s/AKfycbwoupp-fQboYmJ-b69teP3EZPs4Bjq7m0sY3uERl88qbD1nz4T2r6klj5sDKDWaYN6p/exec";
 let isRecordingAccel = false;
 let batchDataAccel = [];
 let batchIntervalIdAccel = null;
@@ -915,7 +915,7 @@ async function sendBatchToServerAccel() {
   };
 
   try {
-    const response = await fetch(`${BASE_URL_ACCEL}?path=telemetry/accel`, {
+    const response = await fetch(`${BASE_URL_ACCEL}/telemetry/accel`, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
@@ -971,7 +971,7 @@ function stopSensor() {
 // ==========================================
 // 4. LOGIC: GPS TRACKER
 // ==========================================
-const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbyYn2DefdPzUDlCIoJllHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSlBITYhT/exec";
+const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbwoupp-fQboYmJ-b69teP3EZPs4Bjq7m0sY3uERl88qbD1nz4T2r6klj5sDKDWaYN6p/exec";
 let watchIdGps = null;
 
 function logGps(msg) {
@@ -1000,7 +1000,7 @@ function startGps() {
 
 async function sendGps(lat, lng, acc) {
   try {
-    const res = await fetch(`${BASE_URL_GPS}?path=telemetry/gps`, {
+    const res = await fetch(`${BASE_URL_GPS}/telemetry/gps`, {
       method: "POST",
       body: JSON.stringify({ device_id: getDeviceId(), ts: new Date().toISOString(), lat, lng, accuracy_m: acc })
     });

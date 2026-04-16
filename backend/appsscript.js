@@ -17,19 +17,46 @@ function sendError(error) {
 // STEP 1 & 8: Router GET & UI Frontend
 // ==========================================
 function doGet(e) {
-  const path = e.parameter && e.parameter.path ? e.parameter.path : "ui";
+  // 1. Tangkap path dari URL (prioritas e.pathInfo sesuai instruksi dosen, fallback ke ?path=)
+  let path = e.pathInfo;
+  if (!path) {
+    path = e.parameter && e.parameter.path ? e.parameter.path : ""; 
+  }
 
+  // 2. Bersihkan garis miring di depan jika ada
+  if (path.startsWith("/")) path = path.substring(1);
+
+  // 3. JIKA URL DIBUKA KOSONGAN (Hanya /exec) -> TAMPILKAN JSON STATUS API
+  if (path === "") {
+    return sendSuccess({
+      status: "ok",
+      mode: "hybrid_api",
+      message: "AttendSense Backend API v1 is running smoothly.",
+      endpoints_available: [
+        "/presence/qr/generate",
+        "/presence/checkin",
+        "/presence/status",
+        "/telemetry/accel",
+        "/telemetry/gps"
+      ]
+    });
+  } 
+  
+  // 4. ROUTING ENDPOINT LAINNYA
   if (path === "presence/status") {
     return handleCheckStatus(e.parameter);
   } else if (path === "presence/list") {
     return handleGetPresenceList(e.parameter);
   } else if (path === "telemetry/accel/latest") { 
     return handleGetLatestAccel(e.parameter);
-  } else if (path === "telemetry/gps/latest") { // <--- ROUTE BARU MODUL 3 (MARKER/MULTIPLAYER)
+  } else if (path === "telemetry/gps/latest") { 
     return handleGetLatestGPS(e.parameter);
-  } else if (path === "telemetry/gps/history") { // <--- ROUTE BARU MODUL 3 (POLYLINE)
+  } else if (path === "telemetry/gps/history") { 
     return handleGetHistoryGPS(e.parameter);
-  } else if (path === "ui") {
+  } 
+  
+  // 5. JIKA INGIN BUKA UI DARI BACKEND, HARUS TAMBAH /ui DI BELAKANG URL
+  else if (path === "ui") {
     return HtmlService.createHtmlOutputFromFile("Index")
       .setTitle("Dashboard Presensi QR")
       .addMetaTag("viewport", "width=device-width, initial-scale=1");
@@ -43,7 +70,15 @@ function doGet(e) {
 // ==========================================
 function doPost(e) {
   try {
-    const path = e.parameter && e.parameter.path ? e.parameter.path : "";
+    // Tangkap path dari URL (prioritas e.pathInfo, fallback ke ?path=)
+    let path = e.pathInfo;
+    if (!path) {
+      path = e.parameter && e.parameter.path ? e.parameter.path : "";
+    }
+    
+    // Bersihkan garis miring di depan jika ada
+    if (path.startsWith("/")) path = path.substring(1);
+
     const body = JSON.parse(e.postData.contents);
 
     if (path === "presence/qr/generate") {
@@ -52,7 +87,7 @@ function doPost(e) {
       return handleCheckIn(body);
     } else if (path === "telemetry/accel") { 
       return handlePostAccel(body);
-    } else if (path === "telemetry/gps") { // <--- ROUTE BARU MODUL 3 (SIMPAN LOKASI)
+    } else if (path === "telemetry/gps") { 
       return handlePostGPS(body);
     } else {
       return sendError("Route not found");
@@ -109,37 +144,7 @@ function handleGenerateQR(body) {
   }
 }
 
-// Dipanggil via google.script.run dari Index.html (Step 8)
-// function processGenerateQR(payload) {
-//   try {
-//     const token = "TKN-" + Utilities.getUuid().substring(0, 6).toUpperCase();
-//     const requestTime = new Date(payload.ts);
-    
-//     // REVISI DOSEN: Ubah TTL menjadi 20 detik (20000 milidetik)
-//     const expiresTime = new Date(requestTime.getTime() + 20000); 
-
-//     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("tokens");
-    
-//     // Header sheet ke-6 sekarang konsepnya adalah 'scan_count'
-//     sheet.appendRow([
-//       token,
-//       payload.course_id,
-//       payload.session_id,
-//       requestTime.toISOString(),
-//       expiresTime.toISOString(),
-//       0, // <--- REVISI DOSEN: Ubah false menjadi 0 (jumlah scan awal)
-//     ]);
-
-//     return {
-//       ok: true,
-//       data: { qr_token: token, expires_at: expiresTime.toISOString() },
-//     };
-//   } catch (error) {
-//     return { ok: false, error: error.message };
-//   }
-// }
-
-// Dipanggil via google.script.run dari Index.html (Step 8)
+// Dipanggil internal
 function processGenerateQR(payload) {
   try {
     const token = "TKN-" + Utilities.getUuid().substring(0, 6).toUpperCase();
@@ -160,7 +165,7 @@ function processGenerateQR(payload) {
       payload.session_id,
       requestTime.toISOString(),
       expiresTime.toISOString(),
-      maxCapacity, // <--- Menyimpan batas maksimal kelas di kolom ke-6
+      maxCapacity, 
     ]);
 
     return {
@@ -171,73 +176,6 @@ function processGenerateQR(payload) {
     return { ok: false, error: error.message };
   }
 }
-
-// function handleCheckIn(body) {
-//   if (!body.user_id || !body.device_id || !body.course_id || !body.session_id || !body.qr_token || !body.ts) {
-//     return sendError("missing_field");
-//   }
-
-//   try {
-//     const ss = SpreadsheetApp.getActiveSpreadsheet();
-//     const tokenSheet = ss.getSheetByName("tokens");
-//     const tokenData = tokenSheet.getDataRange().getValues();
-
-//     let tokenRowIndex = -1;
-//     let isValidToken = false;
-//     let isExpired = false;
-//     let isLimitReached = false; // <--- REVISI: Ganti isUsed jadi isLimitReached
-    
-//     let currentScans = 0;
-//     const MAX_SCANS = 5; // <--- REVISI DOSEN: Batas maksimal 1 token untuk 5 orang
-
-//     for (let i = 1; i < tokenData.length; i++) {
-//       let row = tokenData[i];
-//       if (row[0] === body.qr_token && row[1] === body.course_id && row[2] === body.session_id) {
-//         isValidToken = true;
-//         tokenRowIndex = i + 1;
-
-//         const expiresAt = new Date(row[4]);
-//         const scanTime = new Date(body.ts);
-
-//         if (scanTime > expiresAt) isExpired = true;
-        
-//         // REVISI DOSEN: Hitung jumlah scan saat ini
-//         currentScans = Number(row[5]) || 0;
-//         if (currentScans >= MAX_SCANS) isLimitReached = true;
-        
-//         break;
-//       }
-//     }
-
-//     if (!isValidToken) return sendError("token_invalid");
-//     if (isExpired) return sendError("token_expired");
-    
-//     // REVISI DOSEN: Tolak jika sudah melebihi batas scan
-//     if (isLimitReached) return sendError("token_limit_reached"); 
-
-//     // REVISI DOSEN: Tambahkan jumlah scan (+1) lalu simpan ke database
-//     tokenSheet.getRange(tokenRowIndex, 6).setValue(currentScans + 1);
-
-//     // Simpan ke sheet presence
-//     const presenceSheet = ss.getSheetByName("presence");
-//     const presenceId = "PR-" + Utilities.getUuid().substring(0, 6).toUpperCase();
-
-//     presenceSheet.appendRow([
-//       presenceId,
-//       body.user_id,
-//       body.device_id,
-//       body.course_id,
-//       body.session_id,
-//       body.qr_token,
-//       body.ts,
-//       new Date().toISOString(),
-//     ]);
-
-//     return sendSuccess({ presence_id: presenceId, status: "checked_in" });
-//   } catch (error) {
-//     return sendError("database_error");
-//   }
-// }
 
 function handleCheckIn(body) {
   if (!body.user_id || !body.device_id || !body.course_id || !body.session_id || !body.qr_token || !body.ts) {
@@ -354,10 +292,9 @@ function handlePostAccel(body) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("accel");
     const recordedAt = new Date().toISOString();
-    const rows = []; // Array kosong untuk menampung rombongan data
+    const rows = []; 
 
     // 2. Siapkan data untuk Batch Insert
-    // Header: device_id | x | y | z | sample_ts | batch_ts | recorded_at
     for (let i = 0; i < body.samples.length; i++) {
       let sample = body.samples[i];
       rows.push([
@@ -371,7 +308,7 @@ function handlePostAccel(body) {
       ]);
     }
 
-    // 3. Eksekusi Batch Insert ke Spreadsheet (Lebih cepat dari appendRow)
+    // 3. Eksekusi Batch Insert ke Spreadsheet
     if (rows.length > 0) {
       const startRow = sheet.getLastRow() + 1;
       const numRows = rows.length;
@@ -380,7 +317,6 @@ function handlePostAccel(body) {
       sheet.getRange(startRow, 1, numRows, numCols).setValues(rows);
     }
 
-    // 4. Kembalikan respons sukses sesuai API Contract
     return sendSuccess({ accepted: rows.length });
   } catch (error) {
     return sendError("database_error");
@@ -407,7 +343,6 @@ function handleGetLatestAccel(params) {
       }
     }
     
-    // Jika tidak ditemukan
     return sendError("data_not_found");
   } catch (error) {
     return sendError("database_error");
@@ -426,7 +361,7 @@ function handlePostGPS(body) {
 
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("gps");
-    const accuracy = body.accuracy_m || 0; // Opsional
+    const accuracy = body.accuracy_m || 0; 
     
     // Susunan kolom: device_id | ts | lat | lng | accuracy_m
     sheet.appendRow([
