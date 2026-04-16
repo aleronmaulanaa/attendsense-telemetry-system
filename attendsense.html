@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AttendSense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{--radius:16px;--radius-sm:10px;--accent:#10b981;--accent-glow:rgba(16,185,129,0.3);--accent-soft:rgba(16,185,129,0.1);--danger:#ef4444;--info:#3b82f6;--violet:#8b5cf6;--orange:#f59e0b;--cyan:#06b6d4;--transition:0.35s cubic-bezier(0.4,0,0.2,1)}
+  [data-theme="dark"]{
+    --bg-primary:#0a0f1a;--bg-secondary:#111827;--bg-card:rgba(255,255,255,0.04);--bg-card-hover:rgba(255,255,255,0.08);
+    --glass:rgba(255,255,255,0.06);--glass-border:rgba(255,255,255,0.08);--glass-strong:rgba(10,15,26,0.88);
+    --text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--shadow:0 8px 32px rgba(0,0,0,0.4);
+    --orb-opacity:0.2;--noise-opacity:0.03;--sidebar-bg:rgba(10,15,26,0.95);
+    --input-bg:rgba(255,255,255,0.05);--input-border:rgba(255,255,255,0.1);--input-focus-bg:rgba(255,255,255,0.07);
+    --history-item-bg:rgba(255,255,255,0.02);--history-item-border:rgba(255,255,255,0.03);
+    --badge-absent-bg:rgba(239,68,68,0.08);--badge-absent-color:#f87171;--close-bg:#1e293b;--theme-icon-color:#f59e0b;
+    --log-bg:rgba(0,0,0,0.3);--chart-grid:rgba(255,255,255,0.06);--disabled-bg:rgba(255,255,255,0.04);--disabled-color:#475569;
+  }
+  [data-theme="light"]{
+    --bg-primary:#f1f5f9;--bg-secondary:#ffffff;--bg-card:rgba(0,0,0,0.03);--bg-card-hover:rgba(0,0,0,0.06);
+    --glass:rgba(255,255,255,0.7);--glass-border:rgba(0,0,0,0.08);--glass-strong:rgba(241,245,249,0.92);
+    --text-primary:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--shadow:0 8px 32px rgba(0,0,0,0.08);
+    --orb-opacity:0.08;--noise-opacity:0.015;--sidebar-bg:rgba(255,255,255,0.95);
+    --input-bg:rgba(0,0,0,0.04);--input-border:rgba(0,0,0,0.1);--input-focus-bg:rgba(0,0,0,0.06);
+    --history-item-bg:rgba(0,0,0,0.02);--history-item-border:rgba(0,0,0,0.04);
+    --badge-absent-bg:rgba(239,68,68,0.08);--badge-absent-color:#dc2626;--close-bg:#e2e8f0;--theme-icon-color:#6366f1;
+    --log-bg:rgba(0,0,0,0.04);--chart-grid:rgba(0,0,0,0.08);--disabled-bg:rgba(0,0,0,0.04);--disabled-color:#cbd5e1;
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;transition:background var(--transition),color var(--transition)}
+
+  .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .ambient .orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:var(--orb-opacity);animation:float 20s ease-in-out infinite}
+  .ambient .orb-1{width:500px;height:500px;background:var(--accent);top:-10%;right:-5%}
+  .ambient .orb-2{width:400px;height:400px;background:#6366f1;bottom:-15%;left:-10%;animation-delay:-7s}
+  .ambient .orb-3{width:300px;height:300px;background:#06b6d4;top:40%;left:50%;animation-delay:-14s}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-40px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.95)}}
+  .noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:var(--noise-opacity);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .page{display:none;position:relative;z-index:2;min-height:100vh}
+  .page.active{display:flex;flex-direction:column}
+
+  /* ═══ LOGIN ═══ */
+  #loginPage{align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .login-container{width:100%;max-width:420px;animation:fadeUp .8s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  .login-brand{text-align:center;margin-bottom:40px}
+  .login-brand .logo-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#059669);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 40px var(--accent-glow)}
+  .login-brand .logo-icon svg{width:28px;height:28px}
+  .login-brand h1{font-size:28px;font-weight:800;letter-spacing:-.5px;color:var(--text-primary)}
+  .login-brand p{color:var(--text-muted);font-size:14px;margin-top:6px}
+  .login-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:36px 32px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:background var(--transition),border-color var(--transition)}
+  .form-group{margin-bottom:22px}
+  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+  .form-group input,.ctrl-input{width:100%;padding:14px 16px;font-size:15px;font-family:inherit;font-weight:500;background:var(--input-bg);border:1px solid var(--input-border);border-radius:var(--radius-sm);color:var(--text-primary);outline:none;transition:all .3s ease}
+  .form-group input:focus,.ctrl-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--input-focus-bg)}
+  .form-group input::placeholder,.ctrl-input::placeholder{color:var(--text-muted);font-weight:400;font-size:13px}
+  .form-hint{font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;padding-left:2px}
+  .login-btn,.ctrl-btn{padding:15px 24px;font-size:15px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .3s ease;position:relative;overflow:hidden}
+  .login-btn{width:100%;margin-top:4px}
+  .login-btn:hover,.ctrl-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+  .login-btn:active{transform:translateY(0)}
+  .login-btn .btn-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .5s ease}
+  .login-btn:hover .btn-shine{left:100%}
+  .login-error{display:none;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:13px;margin-bottom:20px;animation:shake .4s ease;align-items:center;gap:8px}
+  .login-error.show{display:flex}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+
+  .hint-stack{position:fixed;top:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:18px}
+  .hint-toast{position:relative;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:var(--radius-sm);padding:16px 20px;min-width:210px;cursor:pointer;transition:all .25s ease;animation:slideIn .5s cubic-bezier(.22,1,.36,1) forwards;opacity:0;box-shadow:var(--shadow)}
+  .hint-toast:nth-child(2){animation-delay:.15s}
+  .hint-toast:hover{transform:scale(1.02)}
+  .hint-toast:active{transform:scale(.98)}
+  @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes slideOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px) scale(.95)}}
+  .hint-role{font-size:15px;font-weight:700;color:var(--text-primary)}
+  .hint-pass{font-size:13px;color:var(--text-secondary);font-family:'Space Mono',monospace;margin-top:4px}
+  .hint-tap{font-size:10px;color:var(--text-muted);margin-top:8px;opacity:.7}
+  .hint-close-circle{position:absolute;top:-11px;right:-11px;width:26px;height:26px;border-radius:50%;background:var(--close-bg);border:1.5px solid var(--glass-border);color:var(--text-muted);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;z-index:5;line-height:1;padding-bottom:1px}
+  .hint-close-circle:hover{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);color:#fca5a5;transform:scale(1.15) rotate(90deg)}
+  .copy-feedback{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:14px 28px;border-radius:var(--radius-sm);color:var(--accent);font-size:14px;font-weight:600;pointer-events:none;z-index:200;opacity:0;transition:all .3s ease;display:flex;align-items:center;gap:8px}
+  .copy-feedback.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  /* ═══ DASHBOARD LAYOUT ═══ */
+  #dashboardPage{display:none;min-height:100vh}
+  #dashboardPage.active{display:flex;flex-direction:row}
+
+  /* Sidebar */
+  .sidebar{display:none;width:240px;flex-shrink:0;background:var(--sidebar-bg);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-right:1px solid var(--glass-border);padding:20px 12px;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:60;transition:width .3s cubic-bezier(.4,0,.2,1),padding .3s ease,background var(--transition),border-color var(--transition)}
+  .sidebar.collapsed{width:68px;padding:20px 10px}
+  .sidebar.collapsed .sidebar-text{opacity:0;width:0;overflow:hidden;margin:0}
+  .sidebar.collapsed .sidebar-brand-text{opacity:0;width:0;overflow:hidden}
+  .sidebar.collapsed .sidebar-brand{justify-content:center;padding:0 0 20px}
+  .sidebar.collapsed .sidebar-item{justify-content:center;padding:12px}
+  .sidebar.collapsed .sidebar-logout{justify-content:center;padding:12px}
+
+  .sidebar-toggle{position:absolute;top:20px;right:-14px;width:28px;height:28px;border-radius:50%;background:var(--bg-secondary);border:1px solid var(--glass-border);color:var(--text-muted);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:10;transition:all .2s ease;font-size:14px}
+  .sidebar-toggle:hover{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+  .sidebar.collapsed .sidebar-toggle{transform:rotate(180deg)}
+
+  .sidebar-brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;border-bottom:1px solid var(--glass-border);margin-bottom:16px;transition:all .3s ease}
+  .sidebar-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#059669);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .sidebar-logo svg{width:18px;height:18px}
+  .sidebar-brand-text{font-size:16px;font-weight:800;letter-spacing:-.3px;white-space:nowrap;transition:opacity .2s ease}
+
+  .sidebar-nav{flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+  .sidebar-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);background:none;border:none;color:var(--text-muted);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s ease;text-align:left;width:100%;white-space:nowrap}
+  .sidebar-item:hover{background:var(--bg-card-hover);color:var(--text-secondary)}
+  .sidebar-item.active{background:var(--accent-soft);color:var(--accent)}
+  .sidebar-item svg{width:20px;height:20px;flex-shrink:0}
+  .sidebar-item.qr-highlight{background:linear-gradient(135deg,var(--accent),#059669);color:#fff;font-weight:700}
+  .sidebar-item.qr-highlight:hover{opacity:.9}
+  .sidebar-text{transition:opacity .2s ease}
+
+  .sidebar-footer{padding-top:12px;border-top:1px solid var(--glass-border);display:flex;flex-direction:column;gap:4px}
+  .sidebar-logout{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);background:none;border:none;color:var(--badge-absent-color);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s ease;text-align:left;width:100%;white-space:nowrap}
+  .sidebar-logout:hover{background:var(--badge-absent-bg)}
+  .sidebar-logout svg{width:20px;height:20px;flex-shrink:0}
+
+  /* Main Content */
+  .main-content{flex:1;min-width:0;margin-left:0;transition:margin-left .3s cubic-bezier(.4,0,.2,1)}
+  .main-content.with-sidebar{margin-left:240px}
+  .main-content.with-sidebar-collapsed{margin-left:68px}
+
+  /* Unified content container - used by both client & admin */
+  .dash-header,.content-container{max-width:1200px;margin-left:auto;margin-right:auto;padding-left:40px;padding-right:40px}
+  .dash-header{padding-top:28px;animation:fadeUp .5s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+  .content-container{padding-top:0;padding-bottom:24px}
+  .setting-container{max-width:880px;margin:0 auto;padding:0 40px 24px;width:100%}
+
+  .dash-header-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .dash-user-info{display:flex;align-items:center;gap:14px;min-width:0}
+  .dash-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#059669);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;box-shadow:0 0 24px var(--accent-glow);flex-shrink:0}
+  .dash-greeting{font-size:22px;font-weight:800;letter-spacing:-.5px}
+  .dash-greeting .name-accent{background:linear-gradient(135deg,var(--accent),#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .dash-subtitle{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+  .theme-toggle{width:42px;height:42px;border-radius:12px;background:var(--bg-card);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s ease;color:var(--theme-icon-color);flex-shrink:0;position:relative;overflow:hidden}
+  .theme-toggle:hover{background:var(--bg-card-hover);transform:rotate(15deg)}
+  .theme-toggle svg{width:20px;height:20px;transition:all .3s ease}
+  .theme-toggle .icon-sun,.theme-toggle .icon-moon{position:absolute;transition:all .4s ease}
+  [data-theme="dark"] .icon-sun{opacity:1;transform:rotate(0)}[data-theme="dark"] .icon-moon{opacity:0;transform:rotate(90deg) scale(.5)}
+  [data-theme="light"] .icon-sun{opacity:0;transform:rotate(-90deg) scale(.5)}[data-theme="light"] .icon-moon{opacity:1;transform:rotate(0)}
+
+  .device-badge{margin-top:14px;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg-card);border:1px solid var(--glass-border);border-radius:20px;font-size:12px;color:var(--text-muted);font-weight:500;transition:background var(--transition),border-color var(--transition)}
+  .device-badge svg{width:14px;height:14px;color:var(--text-secondary)}
+  .device-name{color:var(--text-secondary);font-weight:600}
+  .device-sep{color:var(--glass-border);margin:0 2px}
+  .device-id{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-muted)}
+
+  .dash-section{padding-top:22px;animation:fadeUp .6s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+  .dash-section:nth-child(2){animation-delay:.1s}.dash-section:nth-child(3){animation-delay:.15s}.dash-section:nth-child(4){animation-delay:.2s}.dash-section:nth-child(5){animation-delay:.25s}
+  .section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--glass-border),transparent)}
+
+  .card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;transition:background var(--transition),border-color var(--transition)}
+
+  .dash-footer{padding:32px 40px 24px;text-align:center;animation:fadeUp .6s cubic-bezier(.22,1,.36,1) .4s forwards;opacity:0}
+  .dash-footer-text{font-size:12px;color:var(--text-muted);font-weight:500;letter-spacing:.5px}
+  .dash-footer-text span{color:var(--text-secondary);font-weight:700}
+
+  /* ═══ MAP CARD ═══ */
+  .map-card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;transition:background var(--transition)}
+  .map-placeholder{width:100%;height:240px;background:linear-gradient(135deg,rgba(16,185,129,.04),rgba(6,182,212,.04)),var(--bg-secondary);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;position:relative;overflow:hidden;transition:background var(--transition)}
+  .map-placeholder::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--chart-grid) 1px,transparent 1px),linear-gradient(90deg,var(--chart-grid) 1px,transparent 1px);background-size:40px 40px}
+  .map-pulse-ring{position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid rgba(16,185,129,.15);animation:mapPing 2.5s ease-in-out infinite}
+  .map-pulse-ring:nth-child(2){animation-delay:.8s;width:50px;height:50px}
+  @keyframes mapPing{0%,100%{transform:scale(.8);opacity:.6}50%{transform:scale(1.6);opacity:0}}
+  .map-pin{position:relative;z-index:2;color:var(--accent);filter:drop-shadow(0 0 10px var(--accent-glow))}
+  .map-text{position:relative;z-index:2;font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:2px;text-transform:uppercase}
+  .map-info{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .coord-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .coord-val{font-size:14px;font-weight:600;color:var(--text-secondary);font-family:'Space Mono',monospace}
+  .map-live-badge{padding:6px 14px;border-radius:20px;font-size:11px;font-weight:700;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;gap:6px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulseDot 1.5s ease-in-out infinite}
+  @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ═══ HISTORY CARD ═══ */
+  .history-card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);overflow:hidden;transition:background var(--transition);display:flex;flex-direction:column}
+  .history-header{padding:16px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .history-header h3{font-size:15px;font-weight:700}
+  .history-header .badge{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:rgba(99,102,241,.1);color:#a5b4fc}
+  .history-list{padding:0 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .history-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--history-item-bg);border:1px solid var(--history-item-border);border-radius:var(--radius-sm);transition:all .2s ease}
+  .history-item:hover{background:var(--bg-card-hover)}
+  .history-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .history-icon.present{background:rgba(16,185,129,.1);color:var(--accent)}.history-icon.absent{background:var(--badge-absent-bg);color:var(--badge-absent-color)}
+  .history-icon svg{width:16px;height:16px}
+  .history-detail{flex:1;min-width:0}
+  .h-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .h-time{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .history-status{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0;text-transform:uppercase;letter-spacing:.5px}
+  .history-status.hadir{background:var(--accent-soft);color:var(--accent)}.history-status.absen{background:var(--badge-absent-bg);color:var(--badge-absent-color)}
+
+  /* ═══ CLIENT HOME GRID ═══ */
+  .client-home-grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:0}
+  @media(min-width:880px){
+    .client-home-grid{grid-template-columns:1.3fr 1fr;align-items:start}
+  }
+
+  /* ═══ BOTTOM NAV ═══ */
+  .bottom-nav-wrapper{position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--glass-strong);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--glass-border);transition:background var(--transition),border-color var(--transition)}
+  .bottom-nav{position:relative;padding:6px 12px 14px;display:flex;align-items:flex-end;justify-content:space-around;max-width:480px;margin:0 auto;background:transparent;border:none}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--text-muted);font-size:10px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .25s ease;padding:8px 6px 4px;border-radius:12px;min-width:52px}
+  .nav-item:hover{color:var(--text-secondary)}.nav-item.active{color:var(--accent)}.nav-item.active svg{filter:drop-shadow(0 0 6px var(--accent-glow))}
+  .nav-item svg{width:22px;height:22px}
+  .nav-center{display:flex;flex-direction:column;align-items:center}
+  .nav-qr{width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#059669);border:3px solid var(--bg-primary);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 28px var(--accent-glow);transition:all .3s ease;margin-top:-26px}
+  .nav-qr svg{width:26px;height:26px;color:#fff}
+  .nav-qr:hover{transform:translateY(-4px) scale(1.08)}
+  .nav-qr-label{font-size:10px;font-weight:700;color:var(--accent);margin-top:5px}
+
+  /* ═══ ADMIN SPECIFIC ═══ */
+  .ctrl-panel{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;transition:background var(--transition)}
+  .ctrl-status{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+  .ctrl-dot{width:10px;height:10px;border-radius:50%;transition:background .3s ease}
+  .ctrl-dot.online{background:var(--accent);box-shadow:0 0 8px var(--accent-glow)}
+  .ctrl-dot.offline{background:var(--danger);box-shadow:0 0 8px rgba(239,68,68,.3)}
+  .ctrl-input{max-width:260px;padding:10px 14px;font-size:13px}
+  .ctrl-btn{padding:10px 20px;font-size:13px;font-weight:700;white-space:nowrap}
+  .ctrl-btn.stop{background:linear-gradient(135deg,var(--danger),#dc2626)}
+  .ctrl-btn.stop:hover{box-shadow:0 8px 30px rgba(239,68,68,.3)}
+
+  .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .admin-grid .card{padding:20px}
+  .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:8px}
+  .card-header h3{font-size:14px;font-weight:700}
+  .card-header .card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .card-header .card-icon svg{width:16px;height:16px}
+  .card-header .card-icon.green{background:var(--accent-soft);color:var(--accent)}
+  .card-header .card-icon.violet{background:rgba(139,92,246,.1);color:#a78bfa}
+  .card-header .card-icon.cyan{background:rgba(6,182,212,.1);color:#22d3ee}
+  .card-header .card-icon.orange{background:rgba(245,158,11,.1);color:#fbbf24}
+
+  .chart-container{position:relative;width:100%;height:200px}
+  .chart-container canvas{width:100%!important;height:100%!important}
+
+  .map-compact{width:100%;height:180px;background:linear-gradient(135deg,rgba(16,185,129,.04),rgba(6,182,212,.04)),var(--bg-secondary);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;position:relative;overflow:hidden}
+  .map-compact::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--chart-grid) 1px,transparent 1px),linear-gradient(90deg,var(--chart-grid) 1px,transparent 1px);background-size:30px 30px}
+  .map-compact .map-pulse-ring{width:60px;height:60px}
+  .map-compact .map-pulse-ring:nth-child(2){width:40px;height:40px}
+
+  .map-compact-info{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  .polyline-btn{padding:8px 16px;font-size:12px;font-weight:700;font-family:inherit;background:var(--accent-soft);color:var(--accent);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius-sm);cursor:pointer;transition:all .2s ease;white-space:nowrap}
+  .polyline-btn:hover{background:rgba(16,185,129,.2);border-color:var(--accent)}
+
+  .kehadiran-card{display:flex;flex-direction:column;height:100%}
+  .kehadiran-list{display:flex;flex-direction:column;gap:6px;flex:1;overflow-y:auto;max-height:260px}
+  .kehadiran-list::-webkit-scrollbar{width:6px}
+  .kehadiran-list::-webkit-scrollbar-track{background:transparent}
+  .kehadiran-list::-webkit-scrollbar-thumb{background:var(--glass-border);border-radius:3px}
+
+  .log-card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;margin-top:16px;transition:background var(--transition)}
+  .log-console{background:var(--log-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px 16px;height:140px;overflow-y:auto;font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.8}
+  .log-console .log-line{display:block}
+  .log-console .log-time{color:var(--text-muted);opacity:.6}
+  .log-console .log-info{color:var(--accent)}
+  .log-console .log-warn{color:var(--orange)}
+  .log-console .log-err{color:var(--badge-absent-color)}
+
+  .axis-values{display:flex;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .axis-val{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-secondary);font-family:'Space Mono',monospace}
+  .axis-val .dot{width:10px;height:10px;border-radius:3px}
+  .axis-val .dot.x{background:#ef4444}.axis-val .dot.y{background:var(--accent)}.axis-val .dot.z{background:var(--info)}
+
+  /* ═══ SETTING PAGE ═══ */
+  .setting-card{background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px 26px;margin-bottom:16px;transition:all var(--transition);animation:fadeUp .5s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+  .setting-card:nth-child(1){animation-delay:.05s}
+  .setting-card:nth-child(2){animation-delay:.15s}
+  .setting-card:nth-child(3){animation-delay:.25s}
+  .setting-card-header{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .setting-card-header .setting-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .setting-card-header .setting-icon.endpoint{background:var(--accent-soft);color:var(--accent)}
+  .setting-card-header .setting-icon.theme{background:rgba(245,158,11,.1);color:var(--orange)}
+  .setting-card-header .setting-icon.logout{background:var(--badge-absent-bg);color:var(--badge-absent-color)}
+  .setting-card-header .setting-icon svg{width:22px;height:22px}
+  .setting-card-header h3{font-size:17px;font-weight:700;letter-spacing:-.2px}
+  .setting-desc{font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;padding-left:58px;margin-top:-4px}
+
+  .endpoint-input-row{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;padding-left:58px}
+  .endpoint-input-row input{flex:1;min-width:0;padding:12px 16px;font-size:13px;font-family:'Space Mono',monospace;background:var(--input-bg);border:1px solid var(--input-border);border-radius:var(--radius-sm);color:var(--text-primary);outline:none;transition:all .3s ease}
+  .endpoint-input-row input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--input-focus-bg)}
+  .apply-btn{padding:12px 22px;font-size:13px;font-weight:700;font-family:inherit;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .3s ease;display:flex;align-items:center;gap:8px;white-space:nowrap;background:linear-gradient(135deg,var(--accent),#059669);color:#fff;box-shadow:0 4px 20px var(--accent-glow)}
+  .apply-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+  .apply-btn:disabled{background:var(--disabled-bg);color:var(--disabled-color);cursor:not-allowed;box-shadow:none}
+  .apply-btn .check-icon{width:16px;height:16px;transition:all .3s ease;display:none}
+  .apply-btn.applied .check-icon{display:block;color:var(--accent)}
+  .apply-btn.applied{background:var(--accent-soft);color:var(--accent);border:1px solid rgba(16,185,129,.2)}
+
+  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-left:58px;flex-wrap:wrap}
+  .setting-row-info{flex:1;min-width:0}
+  .setting-row-info .setting-label{font-size:13px;color:var(--text-secondary);font-weight:500}
+  .setting-row-info .setting-value{font-size:11px;color:var(--text-muted);font-weight:500;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+  .setting-action-btn{padding:10px 20px;font-size:13px;font-weight:700;font-family:inherit;border-radius:var(--radius-sm);cursor:pointer;transition:all .3s ease;display:flex;align-items:center;gap:8px;white-space:nowrap;border:1px solid var(--glass-border);background:var(--bg-card);color:var(--text-primary)}
+  .setting-action-btn:hover{background:var(--bg-card-hover);border-color:var(--accent)}
+  .setting-action-btn svg{width:16px;height:16px}
+  .setting-action-btn.logout{background:var(--badge-absent-bg);color:var(--badge-absent-color);border-color:rgba(239,68,68,.2)}
+  .setting-action-btn.logout:hover{background:rgba(239,68,68,.15);border-color:var(--badge-absent-color)}
+
+  /* Page views within dashboard */
+  .view-panel{display:none}
+  .view-panel.active{display:block}
+
+  /* ═══ RESPONSIVE ═══ */
+  /* Mobile (<768px): no sidebar, bottom nav, reduced padding */
+  @media(max-width:767px){
+    .sidebar{display:none!important}
+    .main-content{margin-left:0!important}
+    .view-panel{padding-bottom:100px}
+    .dash-header,.content-container{padding-left:20px;padding-right:20px}
+    .setting-container{padding-left:20px;padding-right:20px}
+    .admin-grid{grid-template-columns:1fr}
+    .ctrl-panel{padding:16px}
+    .ctrl-input{max-width:none;width:100%}
+    .ctrl-btn{width:100%;justify-content:center;text-align:center}
+    .endpoint-input-row{flex-direction:column;padding-left:0}
+    .apply-btn{width:100%;justify-content:center}
+    .setting-desc,.setting-row{padding-left:0}
+    .setting-row{flex-direction:column;align-items:stretch}
+    .setting-action-btn{width:100%;justify-content:center}
+    .dash-greeting{font-size:19px}
+    .dash-footer{padding:24px 20px 16px}
+    .client-home-grid{grid-template-columns:1fr}
+  }
+  /* Tablet & Desktop (≥768px) */
+  @media(min-width:768px){
+    .sidebar{display:flex}
+    .bottom-nav-wrapper{display:none}
+  }
+  /* Large desktop (≥1100px): bigger padding */
+  @media(min-width:1100px){
+    .dash-header,.content-container{padding-left:48px;padding-right:48px}
+    .setting-container{padding-left:48px;padding-right:48px}
+    .dash-footer{padding-left:48px;padding-right:48px}
+  }
+  /* Small screen tweaks */
+  @media(max-width:480px){
+    .ctrl-panel{gap:10px}
+    .card-header h3{font-size:13px}
+    .axis-values{gap:8px}
+    .axis-val{font-size:11px}
+  }
+
+  .page-enter{animation:pageFadeIn .4s ease forwards}
+  @keyframes pageFadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="ambient"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+<div class="noise"></div>
+<div class="copy-feedback" id="copyFeedback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span id="copyText"></span></div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginPage" class="page active">
+  <div class="hint-stack" id="hintStack">
+    <div class="hint-toast" id="hintClient" onclick="copyPassword('12345')">
+      <button class="hint-close-circle" onclick="event.stopPropagation();dismissHint('hintClient')">&times;</button>
+      <div class="hint-role">Client</div><div class="hint-pass">Password: 12345</div><div class="hint-tap">Ketuk untuk menyalin password</div>
+    </div>
+  </div>
+  <div class="login-container">
+    <div class="login-brand">
+      <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg></div>
+      <h1>AttendSense</h1><p>Cloud Computing Practicum Dashboard</p>
+    </div>
+    <div class="login-card">
+      <div class="login-error" id="loginError"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Username atau password salah.</span></div>
+      <div class="form-group"><label>Username</label><input type="text" id="usernameInput" placeholder="Masukkan username anda" autocomplete="off"><div class="form-hint">Ketik "client" atau "admin" sesuai role yang diberikan</div></div>
+      <div class="form-group"><label>Password</label><input type="password" id="passInput" placeholder="Masukkan password anda" autocomplete="off"><div class="form-hint">Password bersifat rahasia, jangan berikan kepada siapapun</div></div>
+      <button class="login-btn" onclick="handleLogin()"><span class="btn-shine"></span>Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="dashboardPage" class="page">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="sidebar-brand">
+      <div class="sidebar-logo"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg></div>
+      <span class="sidebar-brand-text">AttendSense</span>
+    </div>
+    <div class="sidebar-nav">
+      <button class="sidebar-item active" data-view="home" onclick="switchView('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span class="sidebar-text">Home</span></button>
+      <button class="sidebar-item qr-highlight" onclick="setSidebarOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/></svg><span class="sidebar-text">QR Presence</span></button>
+      <button class="sidebar-item" onclick="setSidebarOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg><span class="sidebar-text">Accelerometer</span></button>
+      <button class="sidebar-item" onclick="setSidebarOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="sidebar-text">GPS Tracker</span></button>
+      <button class="sidebar-item" onclick="setSidebarOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span class="sidebar-text">Riwayat</span></button>
+      <button class="sidebar-item" data-view="setting" onclick="switchView('setting')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09c-.658.003-1.25.396-1.51 1z"/></svg><span class="sidebar-text">Setting</span></button>
+    </div>
+    <div class="sidebar-footer">
+      <button class="sidebar-logout" onclick="handleLogout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg><span class="sidebar-text">Logout</span></button>
+    </div>
+  </aside>
+
+  <!-- ═══ CLIENT VIEW ═══ -->
+  <div class="main-content" id="clientView" style="display:none;">
+    <div class="dash-header">
+      <div class="dash-header-top">
+        <div class="dash-user-info">
+          <div class="dash-avatar" id="dashAvatarC">C</div>
+          <div><div class="dash-greeting">Hi, <span class="name-accent" id="dashNameC">Client</span> 👋</div></div>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Ganti Tema"><svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      </div>
+      <div class="device-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg><span class="device-name" id="deviceNameC">Windows</span><span class="device-sep">•</span><span class="device-id">DEV-BVLDKLLY</span></div>
+    </div>
+
+    <!-- Client Home View -->
+    <div class="view-panel active" id="client-home">
+      <div class="content-container">
+        <div class="dash-section" style="padding-top:22px">
+          <div class="section-title">Menu Utama</div>
+        </div>
+        <div class="dash-section" style="padding-top:0">
+          <div class="client-home-grid">
+            <!-- Map Card -->
+            <div class="map-card">
+              <div class="map-placeholder"><div class="map-pulse-ring"></div><div class="map-pulse-ring"></div><svg class="map-pin" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="map-text">Map</span></div>
+              <div class="map-info"><div class="map-coords"><span class="coord-label">Lat &amp; Lng</span><span class="coord-val" id="coordsValC">-7.2756 , 112.7944</span></div><div class="map-live-badge"><span class="live-dot"></span>Live</div></div>
+            </div>
+            <!-- Riwayat Card -->
+            <div class="history-card">
+              <div class="history-header"><h3>Riwayat Absensi</h3><span class="badge">7 Hari</span></div>
+              <div class="history-list">
+                <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 12</div><div class="h-time">15 Apr 2026 • 08:00</div></div><span class="history-status hadir">Hadir</span></div>
+                <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 11</div><div class="h-time">8 Apr 2026 • 08:00</div></div><span class="history-status hadir">Hadir</span></div>
+                <div class="history-item"><div class="history-icon absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 10</div><div class="h-time">1 Apr 2026 • —</div></div><span class="history-status absen">Absen</span></div>
+                <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 9</div><div class="h-time">25 Mar 2026 • 08:00</div></div><span class="history-status hadir">Hadir</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dash-footer"><div class="dash-footer-text"><span>Cloud Computing Praktikum</span></div></div>
+      </div>
+    </div>
+
+    <!-- Client Setting View -->
+    <div class="view-panel" id="client-setting">
+      <div class="setting-container">
+        <div class="section-title" style="margin-top:22px">Pengaturan Akun</div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon endpoint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+            <h3>Pengaturan Endpoint (Universal Client)</h3>
+          </div>
+          <p class="setting-desc">Ganti URL ini dengan URL Apps Script milik kelompok lain jika ingin menguji transmisi data ke server mereka (Swap Test).</p>
+          <div class="endpoint-input-row">
+            <input type="text" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDICIoJlIHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSIE/exec">
+            <button class="apply-btn" id="applyBtnC" disabled onclick="applyEndpoint('C')">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Terapkan
+            </button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>
+            <h3>Tampilan</h3>
+          </div>
+          <p class="setting-desc">Ubah tema antarmuka antara mode gelap dan mode terang sesuai preferensi Anda.</p>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <div class="setting-label">Tema Saat Ini</div>
+              <div class="setting-value" id="themeValueC">Mode Gelap</div>
+            </div>
+            <button class="setting-action-btn" onclick="toggleTheme();updateThemeLabels();">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+              <span id="themeBtnLabelC">Ganti ke Mode Terang</span>
+            </button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+            <h3>Akun</h3>
+          </div>
+          <p class="setting-desc">Keluar dari sesi saat ini. Anda perlu login kembali untuk mengakses dashboard.</p>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <div class="setting-label">Masuk sebagai Client</div>
+              <div class="setting-value">DEV-BVLDKLLY</div>
+            </div>
+            <button class="setting-action-btn logout" onclick="handleLogout()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Keluar
+            </button>
+          </div>
+        </div>
+        <div class="dash-footer" style="padding:24px 0 0"><div class="dash-footer-text"><span>Cloud Computing Praktikum</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ADMIN VIEW ═══ -->
+  <div class="main-content" id="adminView" style="display:none;">
+    <div class="dash-header">
+      <div class="dash-header-top">
+        <div class="dash-user-info">
+          <div class="dash-avatar" id="dashAvatarA" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">A</div>
+          <div><div class="dash-greeting">Hi, <span class="name-accent" id="dashNameA">Admin</span> 👋</div><div class="dash-subtitle">Panel pemantauan semua client</div></div>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Ganti Tema"><svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><svg class="icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      </div>
+    </div>
+
+    <!-- Admin Home View -->
+    <div class="view-panel active" id="admin-home">
+      <div class="content-container">
+        <div class="dash-section" style="padding-top:16px">
+          <div class="section-title">Panel Kontrol Pemantauan</div>
+          <div class="ctrl-panel">
+            <div class="ctrl-status"><div class="ctrl-dot offline" id="ctrlDot"></div><span id="ctrlStatusText">Offline</span></div>
+            <input class="ctrl-input" type="text" id="deviceIdInput" placeholder="Masukkan Device ID spesifik" value="DEV-BVLDKLLY">
+            <button class="ctrl-btn" id="ctrlBtn" onclick="toggleMonitor()"><span id="ctrlBtnText">Mulai Live Monitor</span></button>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="section-title">Menu Utama</div>
+          <div class="admin-grid">
+            <div class="card" style="padding:20px">
+              <div class="card-header"><h3>MAP</h3><div class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div></div>
+              <div class="map-compact"><div class="map-pulse-ring"></div><div class="map-pulse-ring"></div><svg class="map-pin" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="map-text">Map</span></div>
+              <div class="map-compact-info"><div class="map-coords"><span class="coord-label">Lat &amp; Lng</span><span class="coord-val" id="coordsValA">-7.2756 , 112.7944</span></div><button class="polyline-btn">Lihat Jejak (Polyline)</button></div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="card-header"><h3>Posisi Terakhir Perangkat</h3><div class="card-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div></div>
+              <div class="chart-container"><canvas id="barChart"></canvas></div>
+              <div class="axis-values"><div class="axis-val"><span class="dot x"></span>Sumbu X: <span id="valX">0.00</span></div><div class="axis-val"><span class="dot y"></span>Sumbu Y: <span id="valY">0.00</span></div><div class="axis-val"><span class="dot z"></span>Sumbu Z: <span id="valZ">0.00</span></div></div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="card-header"><h3>Data Kehadiran</h3><div class="card-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div></div>
+              <div class="kehadiran-card">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;display:flex;align-items:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0113 0"/></svg>Client: <span style="color:var(--text-secondary);font-weight:600" id="selectedClientId">DEV-BVLDKLLY</span></div>
+                <div class="kehadiran-list">
+                  <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 12</div><div class="h-time">15 Apr 2026 • 08:02</div></div><span class="history-status hadir">Hadir</span></div>
+                  <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 11</div><div class="h-time">8 Apr 2026 • 08:15</div></div><span class="history-status hadir">Hadir</span></div>
+                  <div class="history-item"><div class="history-icon absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 10</div><div class="h-time">1 Apr 2026 • —</div></div><span class="history-status absen">Absen</span></div>
+                  <div class="history-item"><div class="history-icon present"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div><div class="history-detail"><div class="h-title">Pertemuan 9</div><div class="h-time">25 Mar 2026 • 08:05</div></div><span class="history-status hadir">Hadir</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="padding:20px">
+              <div class="card-header"><h3>Grafik Arus Data (Live Stream)</h3><div class="card-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
+              <div class="chart-container"><canvas id="lineChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="log-card">
+            <div class="card-header"><h3>Log Tarikan Data Server</h3><div class="card-icon" style="background:rgba(99,102,241,.1);color:#a5b4fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div></div>
+            <div class="log-console" id="logConsole">
+              <span class="log-line"><span class="log-time">[--:--:--]</span> Sistem siap. Klik 'Mulai Live Monitor' untuk menarik data...</span>
+            </div>
+          </div>
+        </div>
+        <div class="dash-footer"><div class="dash-footer-text"><span>Cloud Computing Praktikum</span></div></div>
+      </div>
+    </div>
+
+    <!-- Admin Setting View -->
+    <div class="view-panel" id="admin-setting">
+      <div class="setting-container">
+        <div class="section-title" style="margin-top:22px">Pengaturan Akun</div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon endpoint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+            <h3>Pengaturan Endpoint (Universal Client)</h3>
+          </div>
+          <p class="setting-desc">Ganti URL ini dengan URL Apps Script milik kelompok lain jika ingin menguji transmisi data ke server mereka (Swap Test).</p>
+          <div class="endpoint-input-row">
+            <input type="text" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbyYn2DefdPzUDICIoJlIHU3bANyrMtJhFKcQtcA0u_SGDpBepes1W0m36wMSIE/exec">
+            <button class="apply-btn" id="applyBtnA" disabled onclick="applyEndpoint('A')">
+              <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              Terapkan
+            </button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/></svg></div>
+            <h3>Tampilan</h3>
+          </div>
+          <p class="setting-desc">Ubah tema antarmuka antara mode gelap dan mode terang sesuai preferensi Anda.</p>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <div class="setting-label">Tema Saat Ini</div>
+              <div class="setting-value" id="themeValueA">Mode Gelap</div>
+            </div>
+            <button class="setting-action-btn" onclick="toggleTheme();updateThemeLabels();">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+              <span id="themeBtnLabelA">Ganti ke Mode Terang</span>
+            </button>
+          </div>
+        </div>
+        <div class="setting-card">
+          <div class="setting-card-header">
+            <div class="setting-icon logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+            <h3>Akun</h3>
+          </div>
+          <p class="setting-desc">Keluar dari sesi saat ini. Anda perlu login kembali untuk mengakses dashboard.</p>
+          <div class="setting-row">
+            <div class="setting-row-info">
+              <div class="setting-label">Masuk sebagai Admin</div>
+              <div class="setting-value">Sesi aktif</div>
+            </div>
+            <button class="setting-action-btn logout" onclick="handleLogout()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Keluar
+            </button>
+          </div>
+        </div>
+        <div class="dash-footer" style="padding:24px 0 0"><div class="dash-footer-text"><span>Cloud Computing Praktikum</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav (Mobile) -->
+  <div class="bottom-nav-wrapper" id="bottomNavWrapper">
+    <nav class="bottom-nav" id="bottomNav">
+      <button class="nav-item active" data-view="home" onclick="switchView('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Home</button>
+      <button class="nav-item" onclick="setNavOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Sensor</button>
+      <div class="nav-center"><button class="nav-qr" onclick="setNavOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/></svg></button><span class="nav-qr-label">QR Scan</span></div>
+      <button class="nav-item" onclick="setNavOnly(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Map</button>
+      <button class="nav-item" data-view="setting" onclick="switchView('setting')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09c-.658.003-1.25.396-1.51 1z"/></svg>Setting</button>
+    </nav>
+  </div>
+</div>
+
+<script>
+let currentRole=null,monitoring=false,monitorInterval=null,lineData=[],sidebarCollapsed=false,currentView='home',lastBreakpoint=null;
+
+(function(){const ua=navigator.userAgent;let d='Unknown';if(/Android/i.test(ua))d='Android';else if(/iPhone|iPad/i.test(ua))d='iOS';else if(/Windows/i.test(ua))d='Windows';else if(/Mac/i.test(ua))d='macOS';else if(/Linux/i.test(ua))d='Linux';document.querySelectorAll('.device-name').forEach(e=>e.textContent=d);})();
+
+if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{const c=p.coords.latitude.toFixed(4)+' , '+p.coords.longitude.toFixed(4);document.querySelectorAll('[id^=coordsVal]').forEach(e=>e.textContent=c);},()=>{});}
+
+function toggleTheme(){document.documentElement.setAttribute('data-theme',document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');if(currentRole==='Admin')setTimeout(initCharts,50);}
+function updateThemeLabels(){const isDark=document.documentElement.getAttribute('data-theme')==='dark';['C','A'].forEach(s=>{const v=document.getElementById('themeValue'+s),l=document.getElementById('themeBtnLabel'+s);if(v)v.textContent=isDark?'Mode Gelap':'Mode Terang';if(l)l.textContent=isDark?'Ganti ke Mode Terang':'Ganti ke Mode Gelap';});}
+
+// ═══ SIDEBAR LOGIC ═══
+function getBreakpoint(w){if(w>=1100)return'large';if(w>=768)return'medium';return'small';}
+
+function toggleSidebar(){
+  sidebarCollapsed=!sidebarCollapsed;
+  applySidebarState();
+}
+
+function applySidebarState(){
+  const sb=document.getElementById('sidebar');
+  sb.classList.toggle('collapsed',sidebarCollapsed);
+  updateMainMargin();
+}
+
+function updateMainMargin(){
+  const views=[document.getElementById('clientView'),document.getElementById('adminView')];
+  views.forEach(v=>{
+    v.classList.remove('with-sidebar','with-sidebar-collapsed');
+    if(window.innerWidth>=768){
+      v.classList.add(sidebarCollapsed?'with-sidebar-collapsed':'with-sidebar');
+    }
+  });
+}
+
+// Auto-adjust sidebar based on screen size
+function handleResize(){
+  const bp=getBreakpoint(window.innerWidth);
+  if(bp!==lastBreakpoint){
+    // Breakpoint changed - auto-adjust sidebar state
+    if(bp==='large'){
+      sidebarCollapsed=false;  // Full screen: open
+    }else if(bp==='medium'){
+      sidebarCollapsed=true;  // Medium: collapsed
+    }
+    // Small: sidebar hidden anyway by CSS, state irrelevant
+    lastBreakpoint=bp;
+  }
+  applySidebarState();
+  if(currentRole==='Admin')setTimeout(initCharts,100);
+}
+
+window.addEventListener('resize',handleResize);
+
+// View switching
+function switchView(view){
+  currentView=view;
+  const prefix=currentRole==='Admin'?'admin-':'client-';
+  document.querySelectorAll('#'+(currentRole==='Admin'?'adminView':'clientView')+' .view-panel').forEach(v=>v.classList.remove('active'));
+  const target=document.getElementById(prefix+view);
+  if(target)target.classList.add('active');
+  document.querySelectorAll('[data-view]').forEach(el=>{el.classList.toggle('active',el.dataset.view===view);});
+  if(view==='home'&&currentRole==='Admin')setTimeout(initCharts,50);
+  if(view==='setting')updateThemeLabels();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function setSidebarOnly(el){document.querySelectorAll('.sidebar-item').forEach(n=>n.classList.remove('active'));if(!el.classList.contains('qr-highlight'))el.classList.add('active');}
+function setNavOnly(el){document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));if(el.classList.contains('nav-item'))el.classList.add('active');}
+
+// Hints
+let adminHintShown=false;
+function dismissHint(id){const el=document.getElementById(id);el.style.animation='slideOut .3s ease forwards';setTimeout(()=>{el.remove();if(id==='hintClient'&&!adminHintShown){adminHintShown=true;showAdminHint();}},300);}
+function showAdminHint(){const s=document.getElementById('hintStack'),t=document.createElement('div');t.className='hint-toast';t.id='hintAdmin';t.onclick=()=>copyPassword('54321');t.innerHTML=`<button class="hint-close-circle" onclick="event.stopPropagation();dismissHint('hintAdmin')">&times;</button><div class="hint-role">Admin</div><div class="hint-pass">Password: 54321</div><div class="hint-tap">Ketuk untuk menyalin password</div>`;s.appendChild(t);}
+function copyPassword(p){navigator.clipboard.writeText(p).then(ok).catch(()=>{const t=document.createElement('textarea');t.value=p;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);ok();});function ok(){const f=document.getElementById('copyFeedback');document.getElementById('copyText').textContent='Password "'+p+'" berhasil disalin!';f.classList.add('show');setTimeout(()=>f.classList.remove('show'),1800);}}
+
+// Login
+const ACCOUNTS={client:{password:'12345',role:'Client'},admin:{password:'54321',role:'Admin'}};
+function handleLogin(){const u=document.getElementById('usernameInput').value.trim().toLowerCase(),p=document.getElementById('passInput').value,e=document.getElementById('loginError'),a=ACCOUNTS[u];if(a&&a.password===p){currentRole=a.role;showDashboard(a.role);}else{e.classList.add('show');document.getElementById('passInput').value='';setTimeout(()=>e.classList.remove('show'),3000);}}
+document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin();});
+document.getElementById('usernameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('passInput').focus();});
+
+function showDashboard(role){
+  document.getElementById('loginPage').classList.remove('active');
+  document.getElementById('dashboardPage').classList.add('active','page-enter');
+  const isAdmin=role==='Admin';
+  document.getElementById('clientView').style.display=isAdmin?'none':'block';
+  document.getElementById('adminView').style.display=isAdmin?'block':'none';
+  document.getElementById('hintStack').style.display='none';
+  currentView='home';
+  document.querySelectorAll('.view-panel').forEach(v=>v.classList.remove('active'));
+  document.getElementById((isAdmin?'admin-':'client-')+'home').classList.add('active');
+  document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view==='home'));
+  // Initialize sidebar state based on current screen size
+  lastBreakpoint=null;  // Force re-evaluation
+  handleResize();
+  if(isAdmin)setTimeout(initCharts,50);
+  updateThemeLabels();
+}
+
+function handleLogout(){stopMonitor();document.getElementById('dashboardPage').classList.remove('active','page-enter');document.getElementById('loginPage').classList.add('active');document.getElementById('passInput').value='';document.getElementById('usernameInput').value='';document.getElementById('hintStack').style.display='flex';currentRole=null;lastBreakpoint=null;}
+
+// Endpoint Apply
+const endpointApplied={C:'',A:''};
+function initEndpoint(s){
+  const input=document.getElementById('endpointInput'+s);
+  const btn=document.getElementById('applyBtn'+s);
+  if(!input||!btn)return;
+  endpointApplied[s]=input.value;
+  input.addEventListener('input',()=>{
+    const changed=input.value!==endpointApplied[s];
+    btn.disabled=!changed;
+    if(changed)btn.classList.remove('applied');
+  });
+}
+function applyEndpoint(s){
+  const input=document.getElementById('endpointInput'+s);
+  const btn=document.getElementById('applyBtn'+s);
+  if(!input||!btn||btn.disabled)return;
+  endpointApplied[s]=input.value;
+  btn.disabled=true;
+  btn.classList.add('applied');
+  const f=document.getElementById('copyFeedback');
+  document.getElementById('copyText').textContent='Endpoint berhasil diterapkan!';
+  f.classList.add('show');
+  setTimeout(()=>f.classList.remove('show'),1800);
+}
+initEndpoint('C');initEndpoint('A');
+
+// ═══ ADMIN CHARTS ═══
+function initCharts(){drawBarChart();drawLineChart();}
+function drawBarChart(x=0,y=0,z=0){
+  const canvas=document.getElementById('barChart');if(!canvas)return;
+  const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const pad={top:20,right:20,bottom:40,left:40};
+  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const yMin=-15,yMax=15,yRange=yMax-yMin;
+  ctx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  const gridC=cs.getPropertyValue('--chart-grid').trim()||'rgba(255,255,255,0.06)';
+  const textC=cs.getPropertyValue('--text-muted').trim()||'#64748b';
+  ctx.strokeStyle=gridC;ctx.lineWidth=1;ctx.font='11px Space Mono, monospace';ctx.fillStyle=textC;ctx.textAlign='right';
+  for(let v=yMin;v<=yMax;v+=5){const py=pad.top+cH-(v-yMin)/yRange*cH;ctx.beginPath();ctx.moveTo(pad.left,py);ctx.lineTo(W-pad.right,py);ctx.stroke();ctx.fillText(v,pad.left-8,py+4);}
+  const bars=[{label:'Sumbu X',val:x,color:'#ef4444'},{label:'Sumbu Y',val:y,color:'#10b981'},{label:'Sumbu Z',val:z,color:'#3b82f6'}];
+  const bw=cW/bars.length;
+  const zeroY=pad.top+cH-(0-yMin)/yRange*cH;
+  ctx.textAlign='center';
+  bars.forEach((b,i)=>{
+    const bx=pad.left+i*bw+bw*0.2,bWidth=bw*0.6;
+    const valY=pad.top+cH-(b.val-yMin)/yRange*cH;
+    ctx.fillStyle=b.color;ctx.globalAlpha=0.85;
+    ctx.beginPath();
+    const rr=4;
+    if(b.val>=0)roundRect(ctx,bx,valY,bWidth,zeroY-valY,rr);else roundRect(ctx,bx,zeroY,bWidth,valY-zeroY,rr);
+    ctx.fill();ctx.globalAlpha=1;
+    ctx.fillStyle=textC;ctx.fillText(b.label,bx+bWidth/2,H-pad.bottom+20);
+  });
+  const vx=document.getElementById('valX'),vy=document.getElementById('valY'),vz=document.getElementById('valZ');
+  if(vx)vx.textContent=x.toFixed(2);if(vy)vy.textContent=y.toFixed(2);if(vz)vz.textContent=z.toFixed(2);
+}
+function roundRect(ctx,x,y,w,h,r){if(h<0){y+=h;h=-h;}if(w<0){x+=w;w=-w;}r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);}
+function drawLineChart(){
+  const canvas=document.getElementById('lineChart');if(!canvas)return;
+  const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
+  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;ctx.scale(dpr,dpr);
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  const pad={top:20,right:20,bottom:20,left:40};
+  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const yMin=-15,yMax=15,yRange=yMax-yMin;
+  ctx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement);
+  const gridC=cs.getPropertyValue('--chart-grid').trim()||'rgba(255,255,255,0.06)';
+  const textC=cs.getPropertyValue('--text-muted').trim()||'#64748b';
+  ctx.strokeStyle=gridC;ctx.lineWidth=1;ctx.font='11px Space Mono, monospace';ctx.fillStyle=textC;ctx.textAlign='right';
+  for(let v=yMin;v<=yMax;v+=5){const py=pad.top+cH-(v-yMin)/yRange*cH;ctx.beginPath();ctx.moveTo(pad.left,py);ctx.lineTo(W-pad.right,py);ctx.stroke();ctx.fillText(v,pad.left-8,py+4);}
+  if(lineData.length<2)return;
+  const maxPts=60,data=lineData.slice(-maxPts);
+  ctx.strokeStyle='rgba(6,182,212,0.15)';ctx.lineWidth=6;ctx.beginPath();
+  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
+  ctx.stroke();
+  ctx.strokeStyle='#06b6d4';ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();
+  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
+  ctx.stroke();
+  const grad=ctx.createLinearGradient(0,pad.top,0,H-pad.bottom);
+  grad.addColorStop(0,'rgba(6,182,212,0.15)');grad.addColorStop(1,'rgba(6,182,212,0)');
+  ctx.fillStyle=grad;ctx.beginPath();
+  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
+  ctx.lineTo(pad.left+(data.length-1)/(maxPts-1)*cW,H-pad.bottom);ctx.lineTo(pad.left,H-pad.bottom);ctx.closePath();ctx.fill();
+}
+
+function toggleMonitor(){if(monitoring)stopMonitor();else startMonitor();}
+function startMonitor(){
+  monitoring=true;lineData=[];
+  document.getElementById('ctrlDot').className='ctrl-dot online';
+  document.getElementById('ctrlStatusText').textContent='Online';
+  document.getElementById('ctrlBtn').classList.add('stop');
+  document.getElementById('ctrlBtnText').textContent='Stop Monitor';
+  const id=document.getElementById('deviceIdInput').value||'DEV-BVLDKLLY';
+  const sel=document.getElementById('selectedClientId');if(sel)sel.textContent=id;
+  addLog('info','Live Monitor dimulai untuk '+id);
+  addLog('info','Koneksi WebSocket berhasil.');
+  monitorInterval=setInterval(()=>{
+    const x=(Math.random()*20-10),y=(Math.random()*20-10),z=(Math.random()*20-10);
+    const stream=Math.sin(Date.now()/500)*8+Math.random()*4-2;
+    lineData.push(Math.max(-15,Math.min(15,stream)));
+    drawBarChart(x,y,z);drawLineChart();
+    if(Math.random()<0.3)addLog('info','Data diterima: X='+x.toFixed(1)+' Y='+y.toFixed(1)+' Z='+z.toFixed(1));
+    if(Math.random()<0.05)addLog('warn','Latensi tinggi: '+(Math.random()*200+50).toFixed(0)+'ms');
+  },800);
+}
+function stopMonitor(){
+  if(!monitoring&&!monitorInterval)return;
+  monitoring=false;clearInterval(monitorInterval);
+  const d=document.getElementById('ctrlDot'),s=document.getElementById('ctrlStatusText'),b=document.getElementById('ctrlBtn'),bt=document.getElementById('ctrlBtnText');
+  if(d)d.className='ctrl-dot offline';if(s)s.textContent='Offline';if(b)b.classList.remove('stop');if(bt)bt.textContent='Mulai Live Monitor';
+  addLog('warn','Live Monitor dihentikan.');
+}
+function addLog(type,msg){const c=document.getElementById('logConsole');if(!c)return;const t=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const line=document.createElement('span');line.className='log-line';line.innerHTML='<span class="log-time">['+t+']</span> <span class="log-'+type+'">'+msg+'</span>';c.appendChild(line);c.scrollTop=c.scrollHeight;}
+</script>
+</body>
+</html>
