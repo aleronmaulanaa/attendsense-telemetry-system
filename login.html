@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AttendSense - Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{--radius:16px;--radius-sm:10px;--accent:#10b981;--accent-glow:rgba(16,185,129,0.3);--accent-soft:rgba(16,185,129,0.1);--danger:#ef4444;--info:#3b82f6;--violet:#8b5cf6;--orange:#f59e0b;--cyan:#06b6d4;--transition:0.35s cubic-bezier(0.4,0,0.2,1)}
+  [data-theme="dark"]{
+    --bg-primary:#0a0f1a;--bg-secondary:#111827;--bg-card:rgba(255,255,255,0.04);--bg-card-hover:rgba(255,255,255,0.08);
+    --glass:rgba(255,255,255,0.06);--glass-border:rgba(255,255,255,0.08);--glass-strong:rgba(10,15,26,0.88);
+    --text-primary:#f1f5f9;--text-secondary:#94a3b8;--text-muted:#64748b;--shadow:0 8px 32px rgba(0,0,0,0.4);
+    --orb-opacity:0.2;--noise-opacity:0.03;--sidebar-bg:rgba(10,15,26,0.95);
+    --input-bg:rgba(255,255,255,0.05);--input-border:rgba(255,255,255,0.1);--input-focus-bg:rgba(255,255,255,0.07);
+    --history-item-bg:rgba(255,255,255,0.02);--history-item-border:rgba(255,255,255,0.03);
+    --badge-absent-bg:rgba(239,68,68,0.08);--badge-absent-color:#f87171;--close-bg:#1e293b;--theme-icon-color:#f59e0b;
+    --log-bg:rgba(0,0,0,0.3);--chart-grid:rgba(255,255,255,0.06);--disabled-bg:rgba(255,255,255,0.04);--disabled-color:#475569;
+  }
+  [data-theme="light"]{
+    --bg-primary:#f1f5f9;--bg-secondary:#ffffff;--bg-card:rgba(0,0,0,0.03);--bg-card-hover:rgba(0,0,0,0.06);
+    --glass:rgba(255,255,255,0.7);--glass-border:rgba(0,0,0,0.08);--glass-strong:rgba(241,245,249,0.92);
+    --text-primary:#0f172a;--text-secondary:#475569;--text-muted:#94a3b8;--shadow:0 8px 32px rgba(0,0,0,0.08);
+    --orb-opacity:0.08;--noise-opacity:0.015;--sidebar-bg:rgba(255,255,255,0.95);
+    --input-bg:rgba(0,0,0,0.04);--input-border:rgba(0,0,0,0.1);--input-focus-bg:rgba(0,0,0,0.06);
+    --history-item-bg:rgba(0,0,0,0.02);--history-item-border:rgba(0,0,0,0.04);
+    --badge-absent-bg:rgba(239,68,68,0.08);--badge-absent-color:#dc2626;--close-bg:#e2e8f0;--theme-icon-color:#6366f1;
+    --log-bg:rgba(0,0,0,0.04);--chart-grid:rgba(0,0,0,0.08);--disabled-bg:rgba(0,0,0,0.04);--disabled-color:#cbd5e1;
+  }
+
+  html{scroll-behavior:smooth}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg-primary);color:var(--text-primary);min-height:100vh;overflow-x:hidden;transition:background var(--transition),color var(--transition)}
+
+  .ambient{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .ambient .orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:var(--orb-opacity);animation:float 20s ease-in-out infinite}
+  .ambient .orb-1{width:500px;height:500px;background:var(--accent);top:-10%;right:-5%}
+  .ambient .orb-2{width:400px;height:400px;background:#6366f1;bottom:-15%;left:-10%;animation-delay:-7s}
+  .ambient .orb-3{width:300px;height:300px;background:#06b6d4;top:40%;left:50%;animation-delay:-14s}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-40px) scale(1.05)}66%{transform:translate(-20px,20px) scale(0.95)}}
+  .noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:var(--noise-opacity);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  .page{display:none;position:relative;z-index:2;min-height:100vh}
+  .page.active{display:flex;flex-direction:column}
+
+  /* ═══ LOGIN ═══ */
+  #loginPage{align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .login-container{width:100%;max-width:420px;animation:fadeUp .8s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+  .login-brand{text-align:center;margin-bottom:40px}
+  .login-brand .logo-icon{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--accent),#059669);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 40px var(--accent-glow)}
+  .login-brand .logo-icon svg{width:28px;height:28px}
+  .login-brand h1{font-size:28px;font-weight:800;letter-spacing:-.5px;color:var(--text-primary)}
+  .login-brand p{color:var(--text-muted);font-size:14px;margin-top:6px}
+  .login-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:36px 32px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:background var(--transition),border-color var(--transition)}
+  .form-group{margin-bottom:22px}
+  .form-group label{display:block;font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+  .form-group input,.ctrl-input{width:100%;padding:14px 16px;font-size:15px;font-family:inherit;font-weight:500;background:var(--input-bg);border:1px solid var(--input-border);border-radius:var(--radius-sm);color:var(--text-primary);outline:none;transition:all .3s ease}
+  .form-group input:focus,.ctrl-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);background:var(--input-focus-bg)}
+  .form-group input::placeholder,.ctrl-input::placeholder{color:var(--text-muted);font-weight:400;font-size:13px}
+  .form-hint{font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;padding-left:2px}
+  .login-btn,.ctrl-btn{padding:15px 24px;font-size:15px;font-weight:700;font-family:inherit;background:linear-gradient(135deg,var(--accent),#059669);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all .3s ease;position:relative;overflow:hidden}
+  .login-btn{width:100%;margin-top:4px}
+  .login-btn:hover,.ctrl-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow)}
+  .login-btn:active{transform:translateY(0)}
+  .login-btn .btn-shine{position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);transition:left .5s ease}
+  .login-btn:hover .btn-shine{left:100%}
+  .login-error{display:none;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;font-size:13px;margin-bottom:20px;animation:shake .4s ease;align-items:center;gap:8px}
+  .login-error.show{display:flex}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}}
+
+  .hint-stack{position:fixed;top:20px;right:20px;z-index:100;display:flex;flex-direction:column;gap:18px}
+  .hint-toast{position:relative;background:var(--glass-strong);border:1px solid var(--glass-border);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-radius:var(--radius-sm);padding:16px 20px;min-width:210px;cursor:pointer;transition:all .25s ease;animation:slideIn .5s cubic-bezier(.22,1,.36,1) forwards;opacity:0;box-shadow:var(--shadow)}
+  .hint-toast:nth-child(2){animation-delay:.15s}
+  .hint-toast:hover{transform:scale(1.02)}
+  .hint-toast:active{transform:scale(.98)}
+  @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+  @keyframes slideOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px) scale(.95)}}
+  .hint-role{font-size:15px;font-weight:700;color:var(--text-primary)}
+  .hint-pass{font-size:13px;color:var(--text-secondary);font-family:'Space Mono',monospace;margin-top:4px}
+  .hint-tap{font-size:10px;color:var(--text-muted);margin-top:8px;opacity:.7}
+  .hint-close-circle{position:absolute;top:-11px;right:-11px;width:26px;height:26px;border-radius:50%;background:var(--close-bg);border:1.5px solid var(--glass-border);color:var(--text-muted);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;z-index:5;line-height:1;padding-bottom:1px}
+  .hint-close-circle:hover{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);color:#fca5a5;transform:scale(1.15) rotate(90deg)}
+  .copy-feedback{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.8);background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:14px 28px;border-radius:var(--radius-sm);color:var(--accent);font-size:14px;font-weight:600;pointer-events:none;z-index:200;opacity:0;transition:all .3s ease;display:flex;align-items:center;gap:8px}
+  .copy-feedback.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  /* ═══ RESPONSIVE ═══ */
+  .page-enter{animation:pageFadeIn .4s ease forwards}
+  @keyframes pageFadeIn{from{opacity:0}to{opacity:1}}
+</style>
+</head>
+<body>
+
+<div class="ambient"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+<div class="noise"></div>
+<div class="copy-feedback" id="copyFeedback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg><span id="copyText"></span></div>
+
+<div id="loginPage" class="page active">
+  <div class="hint-stack" id="hintStack">
+    <div class="hint-toast" id="hintClient" onclick="copyPassword('12345')">
+      <button class="hint-close-circle" onclick="event.stopPropagation();dismissHint('hintClient')">&times;</button>
+      <div class="hint-role">Client</div><div class="hint-pass">Password: 12345</div><div class="hint-tap">Ketuk untuk menyalin password</div>
+    </div>
+  </div>
+  <div class="login-container">
+    <div class="login-brand">
+      <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><circle cx="17.5" cy="17.5" r="3.5"/></svg></div>
+      <h1>AttendSense</h1><p>Cloud Computing Practicum Dashboard</p>
+    </div>
+    <div class="login-card">
+      <div class="login-error" id="loginError"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Username atau password salah.</span></div>
+      <div class="form-group"><label>Username</label><input type="text" id="usernameInput" placeholder="Masukkan username anda" autocomplete="off"><div class="form-hint">Ketik "client" atau "admin" sesuai role yang diberikan</div></div>
+      <div class="form-group"><label>Password</label><input type="password" id="passInput" placeholder="Masukkan password anda" autocomplete="off"><div class="form-hint">Password bersifat rahasia, jangan berikan kepada siapapun</div></div>
+      <button class="login-btn" onclick="handleLogin()"><span class="btn-shine"></span>Masuk</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentRole=null;
+
+function toggleTheme(){document.documentElement.setAttribute('data-theme',document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');}
+
+// Hints
+let adminHintShown=false;
+function dismissHint(id){const el=document.getElementById(id);el.style.animation='slideOut .3s ease forwards';setTimeout(()=>{el.remove();if(id==='hintClient'&&!adminHintShown){adminHintShown=true;showAdminHint();}},300);}
+function showAdminHint(){const s=document.getElementById('hintStack'),t=document.createElement('div');t.className='hint-toast';t.id='hintAdmin';t.onclick=()=>copyPassword('54321');t.innerHTML=`<button class="hint-close-circle" onclick="event.stopPropagation();dismissHint('hintAdmin')">&times;</button><div class="hint-role">Admin</div><div class="hint-pass">Password: 54321</div><div class="hint-tap">Ketuk untuk menyalin password</div>`;s.appendChild(t);}
+function copyPassword(p){navigator.clipboard.writeText(p).then(ok).catch(()=>{const t=document.createElement('textarea');t.value=p;t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);ok();});function ok(){const f=document.getElementById('copyFeedback');document.getElementById('copyText').textContent='Password "'+p+'" berhasil disalin!';f.classList.add('show');setTimeout(()=>f.classList.remove('show'),1800);}}
+
+// Login
+const ACCOUNTS={client:{password:'12345',role:'Client'},admin:{password:'54321',role:'Admin'}};
+function handleLogin(){
+  const u=document.getElementById('usernameInput').value.trim().toLowerCase(),p=document.getElementById('passInput').value,e=document.getElementById('loginError'),a=ACCOUNTS[u];
+  if(a&&a.password===p){
+    currentRole=a.role;
+    showDashboard(a.role);
+  }else{
+    e.classList.add('show');document.getElementById('passInput').value='';setTimeout(()=>e.classList.remove('show'),3000);
+  }
+}
+document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin();});
+document.getElementById('usernameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('passInput').focus();});
+
+function showDashboard(role){
+  const isAdmin = role === 'Admin';
+  window.location.href = isAdmin 
+    ? 'admin_page/admin.html' 
+    : 'client_page/client.html';
+}
+</script>
+</body>
+</html>
