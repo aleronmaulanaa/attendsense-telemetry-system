@@ -17,33 +17,27 @@ function sendError(error) {
 // STEP 1 & 8: Router GET & UI Frontend
 // ==========================================
 function doGet(e) {
-  // 1. Tangkap path dari URL (prioritas e.pathInfo sesuai instruksi dosen, fallback ke ?path=)
-  let path = e.pathInfo;
-  if (!path) {
-    path = e.parameter && e.parameter.path ? e.parameter.path : ""; 
-  }
+  // KEMBALI KE VERSI STABIL: Murni menggunakan ?path=
+  const path = e.parameter && e.parameter.path ? e.parameter.path : ""; 
 
-  // 2. Bersihkan garis miring di depan jika ada
-  if (path.startsWith("/")) path = path.substring(1);
-
-  // 3. JIKA URL DIBUKA KOSONGAN (Hanya /exec) -> TAMPILKAN JSON STATUS API
+  // JIKA URL DIBUKA KOSONGAN (Hanya /exec) -> TAMPILKAN JSON STATUS API
   if (path === "") {
     return sendSuccess({
       status: "ok",
       mode: "hybrid_api",
       message: "AttendSense Backend API v1 is running smoothly.",
       endpoints_available: [
-        "/presence/qr/generate",
-        "/presence/checkin",
-        "/presence/status",
-        "/telemetry/accel",
-        "/telemetry/gps"
+        "?path=presence/qr/generate",
+        "?path=presence/checkin",
+        "?path=presence/status",
+        "?path=telemetry/accel",
+        "?path=telemetry/gps"
       ]
     });
   } 
   
-  // 4. ROUTING ENDPOINT LAINNYA
-  if (path === "presence/status") {
+  // ROUTING ENDPOINT LAINNYA
+  else if (path === "presence/status") {
     return handleCheckStatus(e.parameter);
   } else if (path === "presence/list") {
     return handleGetPresenceList(e.parameter);
@@ -55,7 +49,7 @@ function doGet(e) {
     return handleGetHistoryGPS(e.parameter);
   } 
   
-  // 5. JIKA INGIN BUKA UI DARI BACKEND, HARUS TAMBAH /ui DI BELAKANG URL
+  // JIKA INGIN BUKA UI DARI BACKEND, HARUS TAMBAH ?path=ui DI BELAKANG URL
   else if (path === "ui") {
     return HtmlService.createHtmlOutputFromFile("Index")
       .setTitle("Dashboard Presensi QR")
@@ -70,15 +64,8 @@ function doGet(e) {
 // ==========================================
 function doPost(e) {
   try {
-    // Tangkap path dari URL (prioritas e.pathInfo, fallback ke ?path=)
-    let path = e.pathInfo;
-    if (!path) {
-      path = e.parameter && e.parameter.path ? e.parameter.path : "";
-    }
-    
-    // Bersihkan garis miring di depan jika ada
-    if (path.startsWith("/")) path = path.substring(1);
-
+    // KEMBALI KE VERSI STABIL: Murni menggunakan ?path=
+    const path = e.parameter && e.parameter.path ? e.parameter.path : "";
     const body = JSON.parse(e.postData.contents);
 
     if (path === "presence/qr/generate") {
