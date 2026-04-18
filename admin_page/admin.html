@@ -487,9 +487,17 @@
               
               <div class="admin-controls-gps">
                 <label>Filter Perangkat Klien</label>
-                <select id="deviceListGps">
+                <select id="deviceListGps" onchange="filterMapMarkers()">
                   <option value="">-- Semua Perangkat Terdeteksi --</option>
                 </select>
+
+                <div id="gpsDetailPanel" style="display:none; margin-bottom: 12px; padding: 12px; background: var(--bg-primary); border: 1px solid var(--glass-border); border-radius: 8px; font-size: 12px;">
+                  <div style="color: var(--text-muted); font-weight: 800; margin-bottom: 8px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">Detail Lokasi Terakhir</div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Kordinat X:</span> <strong id="detLat" style="color:var(--info); font-family: monospace;">-</strong></div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Kordinat Y:</span> <strong id="detLng" style="color:var(--info); font-family: monospace;">-</strong></div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span>Toleransi:</span> <strong id="detAcc" style="color:var(--accent);">-</strong></div>
+                  <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--glass-border);"><span>Update:</span> <strong id="detTs" style="color:var(--text-primary);">-</strong></div>
+                </div>
 
                 <div class="gps-btn-group">
                   <button class="gps-btn" onclick="centerToDeviceGps()">
@@ -501,11 +509,8 @@
                     <i id="histLoadingGps" class="fas fa-spinner spinner"></i>
                     <span id="histTextGps">Lacak Jejak (Polyline)</span>
                   </button>
-
-                  <button class="gps-btn danger" onclick="resetViewGps()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg> Reset Tampilan Peta
-                  </button>
-                </div>
+                  
+                  </div>
               </div>
             </div>
           </div>
@@ -1002,13 +1007,13 @@ function stopPollingAccel() {
 // ==========================================
 let mapAdminObj, polylineAdmin;
 let markerListAdmin = {}; 
+let latestGpsDataAdmin = {}; // <--- VARIABEL BARU UNTUK MENYIMPAN DATA MENTAH
 let isTrackingHistoryAdmin = false;
 let trackedDeviceIdAdmin = "";
 let gpsPollingInterval = null;
 
 function initGps() {
   mapAdminObj = L.map('mapAdmin', { zoomControl: false }).setView([-7.2575, 112.7521], 13);
-  // Gunakan map dark matter dari CartoDB agar lebih sesuai dengan tema
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap'
   }).addTo(mapAdminObj);
@@ -1028,6 +1033,9 @@ async function updateMarkersGps() {
       const select = document.getElementById("deviceListGps");
 
       json.data.forEach(user => {
+        // Simpan data mentahnya ke memori kita
+        latestGpsDataAdmin[user.device_id] = user; 
+
         if (![...select.options].some(o => o.value === user.device_id)) {
           select.add(new Option(user.device_id, user.device_id));
         }
@@ -1037,20 +1045,58 @@ async function updateMarkersGps() {
           markerListAdmin[user.device_id].setLatLng(latLng);
         } else {
           const icon = L.divIcon({ className: '', html: '<div class="user-dot"></div>', iconSize: [14, 14] });
-          markerListAdmin[user.device_id] = L.marker(latLng, { icon }).addTo(mapAdminObj).bindPopup(`<b>${user.device_id}</b>`);
+          markerListAdmin[user.device_id] = L.marker(latLng, { icon }).bindPopup(`<b>${user.device_id}</b>`);
         }
 
         if (isTrackingHistoryAdmin && user.device_id === trackedDeviceIdAdmin) {
           polylineAdmin.addLatLng(latLng);
         }
       });
+
+      filterMapMarkers();
     }
   } catch (e) { console.error("Update marker gps error."); }
 }
 
+function filterMapMarkers() {
+  const selectedDevId = document.getElementById("deviceListGps").value;
+  const detailPanel = document.getElementById("gpsDetailPanel"); // Tangkap panel HTML
+  
+  if (isTrackingHistoryAdmin && selectedDevId !== trackedDeviceIdAdmin) {
+    stopHistoryModeGps();
+  }
+
+  // LOGIKA MENAMPILKAN DATA DETAIL KE PANEL
+  if (selectedDevId !== "") {
+    const data = latestGpsDataAdmin[selectedDevId];
+    if (data) {
+      document.getElementById("detLat").innerText = data.lat.toFixed(5);
+      document.getElementById("detLng").innerText = data.lng.toFixed(5);
+      document.getElementById("detAcc").innerText = "± " + Math.round(data.accuracy_m) + " Meter";
+      
+      // Format jam agar lebih mudah dibaca
+      const timeObj = new Date(data.ts);
+      document.getElementById("detTs").innerText = timeObj.toLocaleTimeString('id-ID') + " WIB";
+      
+      detailPanel.style.display = "block"; // Munculkan panel
+    }
+  } else {
+    detailPanel.style.display = "none"; // Sembunyikan jika pilih "Semua Perangkat"
+  }
+
+  for (const devId in markerListAdmin) {
+    const marker = markerListAdmin[devId];
+    if (selectedDevId === "" || selectedDevId === devId) {
+      if (!mapAdminObj.hasLayer(marker)) marker.addTo(mapAdminObj);
+    } else {
+      if (mapAdminObj.hasLayer(marker)) mapAdminObj.removeLayer(marker);
+    }
+  }
+}
+
 async function toggleHistoryGps() {
   const devId = document.getElementById("deviceListGps").value;
-  if (!devId) return alert("Pilih perangkat dari dropdown terlebih dahulu.");
+  if (!devId) return alert("Pilih perangkat spesifik dari dropdown terlebih dahulu untuk melacak jejaknya.");
 
   const btn = document.getElementById("btnHistoryGps");
   const text = document.getElementById("histTextGps");
@@ -1104,8 +1150,13 @@ function stopHistoryModeGps() {
 
 function centerToDeviceGps() {
   const devId = document.getElementById("deviceListGps").value;
-  if (!devId) return alert("Pilih perangkat untuk dipusatkan.");
+  // Jika memilih semua perangkat, kembalikan kamera ke tengah default
+  if (!devId) {
+    mapAdminObj.setView([-7.2575, 112.7521], 13);
+    return;
+  }
 
+  // Jika memfokuskan 1 perangkat, zoom tepat ke atas perangkat tersebut
   if (markerListAdmin[devId]) {
     mapAdminObj.panTo(markerListAdmin[devId].getLatLng(), { animate: true });
     mapAdminObj.setZoom(18);
@@ -1114,11 +1165,7 @@ function centerToDeviceGps() {
     alert("Data lokasi perangkat belum tersedia.");
   }
 }
-
-function resetViewGps() {
-  stopHistoryModeGps();
-  mapAdminObj.setView([-7.2575, 112.7521], 13);
-}
+// Note: Fungsi resetViewGps() telah dihapus.
 
 // Initialization Boot
 window.addEventListener('load', () => {
