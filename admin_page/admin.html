@@ -526,7 +526,7 @@
           <p class="setting-desc">Tentukan URL Web Apps Script tujuan utama untuk menarik data (Telemetry & Presensi).</p>
           <div class="setting-content">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec">
+              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbxkTG10MokzSyxg0PoItBMrv44EMotIeGWkfP2ZbVzphxXD5HpXr8xzMxxtECG0Syap/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnA" disabled onclick="applyEndpoint('A')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -807,7 +807,10 @@ async function generateQR() {
     const result = await response.json();
     
     if (result.ok) {
-      statusEl.innerText = `Token: ${result.data.qr_token}\n(Berlaku 25s, Kuota: ${maxCap})`;
+      // PERBAIKAN: Tangkap Sisa Kuota dari server, pastikan berubah dinamis
+      let sisa = result.data.sisa_kuota !== undefined ? result.data.sisa_kuota : maxCap;
+
+      statusEl.innerText = `Token: ${result.data.qr_token}\n(Berlaku 25s, Sisa Kuota: ${sisa})`;
       statusEl.className = "status-text success";
       
       const qrPayload = JSON.stringify({
