@@ -519,7 +519,7 @@
           <p class="setting-desc">Tentukan URL Web Apps Script tujuan utama untuk menarik data (Telemetry & Presensi).</p>
           <div class="setting-content">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbyPBm_lOOEKxU1M4S1_VVD7XxDRw4GFQG2l7GHoSZAOYdhviPcZAvHXA526mY2Zs-bD/exec">
+              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnA" disabled onclick="applyEndpoint('A')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -901,7 +901,11 @@ function initAccelCharts() {
 async function fetchServerDataAccel() {
   const targetDevId = document.getElementById("targetDeviceIdAccel").value.trim();
   let fetchUrl = `${getAdminBaseUrl()}?path=telemetry/accel/latest`;
-  if (targetDevId !== "") fetchUrl += `&device_id=${targetDevId}`;
+  
+  // Jika ada isinya, tambahkan ke parameter
+  if (targetDevId !== "") {
+    fetchUrl += `&device_id=${targetDevId}`;
+  }
 
   try {
     const response = await fetch(fetchUrl);
@@ -910,9 +914,16 @@ async function fetchServerDataAccel() {
     if(result.ok) {
       let now = new Date().getTime(); 
       let x = result.data.x; let y = result.data.y; let z = result.data.z;
-      let device = result.data.device_id;
-
-      logMessageAccelAdmin(`<span style="color:var(--text-primary)">[${device}]</span> X:${x} Y:${y} Z:${z}`);
+      let actualDevice = result.data.device_id; // Mengambil ID dari balasan server
+      
+      // PERBAIKAN KUNCI (AUTO-LOCK):
+      // Jika Admin mengosongkan kotak, isi otomatis dengan ID yang baru saja ditangkap!
+      if (targetDevId === "") {
+        document.getElementById("targetDeviceIdAccel").value = actualDevice;
+        logMessageAccelAdmin(`<span style="color:var(--info)">[Sistem] Radar mengunci pada perangkat aktif: ${actualDevice}</span>`);
+      }
+      
+      logMessageAccelAdmin(`<span style="color:var(--text-primary)">[${actualDevice}]</span> X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)}`);
 
       dataX.push([now, x]); dataY.push([now, y]); dataZ.push([now, z]);
       if (dataX.length > MAX_DATA_POINTS) { dataX.shift(); dataY.shift(); dataZ.shift(); }
@@ -924,7 +935,7 @@ async function fetchServerDataAccel() {
       document.getElementById("valY").innerText = y.toFixed(2);
       document.getElementById("valZ").innerText = z.toFixed(2);
     } else {
-      logMessageAccelAdmin(`<span style="color:var(--orange)">Peringatan: ${result.error}</span>`);
+      logMessageAccelAdmin(`<span style="color:var(--orange)">Info: ${result.error} (Menunggu data...)</span>`);
     }
   } catch (e) {
     logMessageAccelAdmin(`<span style="color:var(--danger)">Koneksi ke server Database gagal.</span>`);

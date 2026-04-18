@@ -426,7 +426,7 @@
         <div class="card" style="border: 1px dashed var(--accent); background: var(--accent-soft);">
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28" style="color:var(--accent)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Konfigurasi Server Presensi</h2>
           <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; line-height: 1.6;">Ganti URL di bawah ini dengan URL Apps Script milik kelompok lain jika dosen meminta Anda untuk melakukan uji coba *Cross-Server* (Swap Test).</p>
-          <input type="text" class="input-themed" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbyPBm_lOOEKxU1M4S1_VVD7XxDRw4GFQG2l7GHoSZAOYdhviPcZAvHXA526mY2Zs-bD/exec" style="margin-bottom: 0;" />
+          <input type="text" class="input-themed" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec" style="margin-bottom: 0;" />
         </div>
 
         <div class="card">
@@ -561,7 +561,7 @@
           <p class="setting-desc">Simpan endpoint Google Apps Script baru jika ingin mengganti tujuan database.</p>
           <div style="padding-left: 64px;">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbyPBm_lOOEKxU1M4S1_VVD7XxDRw4GFQG2l7GHoSZAOYdhviPcZAvHXA526mY2Zs-bD/exec">
+              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnC" disabled onclick="applyEndpoint('C')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -869,7 +869,7 @@ function restartScanner() {
 // ==========================================
 // 3. LOGIC: ACCELEROMETER
 // ==========================================
-const BASE_URL_ACCEL = "https://script.google.com/macros/s/AKfycbyPBm_lOOEKxU1M4S1_VVD7XxDRw4GFQG2l7GHoSZAOYdhviPcZAvHXA526mY2Zs-bD/exec";
+const BASE_URL_ACCEL = "https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec";
 let isRecordingAccel = false;
 let batchDataAccel = [];
 let batchIntervalIdAccel = null;
@@ -971,7 +971,7 @@ function stopSensor() {
 // ==========================================
 // 4. LOGIC: GPS TRACKER
 // ==========================================
-const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbyPBm_lOOEKxU1M4S1_VVD7XxDRw4GFQG2l7GHoSZAOYdhviPcZAvHXA526mY2Zs-bD/exec";
+const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbzyp4wAT2xwEbD1LPSCkT1HQn0MtXZZa6JnKxWBrwoQp4pWoWl1obdmb_bM6r01bCe9/exec";
 let watchIdGps = null;
 
 function logGps(msg) {
