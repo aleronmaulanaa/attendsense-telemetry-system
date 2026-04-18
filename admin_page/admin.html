@@ -865,7 +865,8 @@ let latestChartAdmin;
 let dataX = [], dataY = [], dataZ = [];
 const MAX_DATA_POINTS = 20; 
 let pollingIntervalAccel = null;
-let lastAccelTimeAdmin = null; // Variabel baru untuk melacak waktu data terakhir
+let lastAccelTimeAdmin = null; 
+let stagnantCountAccel = 0; // <--- PERBAIKAN 1: Variabel penghitung toleransi jaringan
 
 function logMessageAccelAdmin(msg) {
   const logBox = document.getElementById("serverLogAccelAdmin");
@@ -919,19 +920,27 @@ async function fetchServerDataAccel() {
       let now = new Date().getTime(); 
       let x = result.data.x; let y = result.data.y; let z = result.data.z;
       let actualDevice = result.data.device_id;
-      let dataTime = result.data.t; // Mengambil timestamp asli dari data sensor
+      let dataTime = result.data.t;
 
-      // FITUR PENDETEKSI DEVICE BERHENTI MENGIRIM
+      // PERBAIKAN 2: FITUR PENDETEKSI DENGAN TOLERANSI JARINGAN 9 DETIK
       if (lastAccelTimeAdmin === dataTime && targetDevId !== "") {
-         document.getElementById("accelWarningBanner").style.display = "flex";
-         stopPollingAccel(); // Paksa matikan monitor & ubah badge jadi Offline
-         logMessageAccelAdmin(`<span style="color:var(--orange)">[Warning] Data stagnan. Monitoring dihentikan.</span>`);
-         return; // Berhenti memproses grafik
+         stagnantCountAccel++;
+         
+         // Jika sudah 3 kali tarikan (~9 detik) data tetap sama, baru nyatakan Offline
+         if (stagnantCountAccel >= 3) {
+             document.getElementById("accelWarningBanner").style.display = "flex";
+             stopPollingAccel(); // Mengembalikan status jadi Offline
+             logMessageAccelAdmin(`<span style="color:var(--orange)">[Warning] Data stagnan. Monitoring dihentikan.</span>`);
+         }
+         return; // Hentikan fungsi agar grafik tidak menggambar ulang data yang sama
       }
+      
+      // Jika data baru masuk, reset hitungan toleransi
+      stagnantCountAccel = 0;
       lastAccelTimeAdmin = dataTime;
       document.getElementById("accelWarningBanner").style.display = "none";
 
-      // FITUR AUTO-LOCK
+      // FITUR AUTO-LOCK RADAR
       if (targetDevId === "") {
         document.getElementById("targetDeviceIdAccel").value = actualDevice;
         logMessageAccelAdmin(`<span style="color:var(--info)">[Sistem] Radar mengunci pada perangkat aktif: ${actualDevice}</span>`);
@@ -944,8 +953,6 @@ async function fetchServerDataAccel() {
 
       realtimeChartAdmin.updateSeries([ { name: 'Sumbu X', data: dataX }, { name: 'Sumbu Y', data: dataY }, { name: 'Sumbu Z', data: dataZ } ]);
       latestChartAdmin.updateSeries([{ name: 'Nilai Terbaru', data: [x, y, z] }]);
-      
-      // BUG FIX: Baris pemanggil valX, valY, valZ telah dihapus dari sini.
 
     } else {
       logMessageAccelAdmin(`<span style="color:var(--orange)">Info: ${result.error} (Menunggu data...)</span>`);
@@ -963,8 +970,9 @@ function startPollingAccel() {
   badge.classList.add("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
   
-  // RESET MEMORI WAKTU & SEMBUNYIKAN BANNER SAAT DIMULAI
+  // PERBAIKAN 3: RESET MEMORI WAKTU & TOLERANSI SAAT TOMBOL MULAI DITEKAN
   lastAccelTimeAdmin = null;
+  stagnantCountAccel = 0; 
   document.getElementById("accelWarningBanner").style.display = "none";
 
   logMessageAccelAdmin("Menghubungkan ke Server (Interval 3 Detik)...");
@@ -976,6 +984,7 @@ function stopPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
+  // Mengubah indikator kembali ke Offline sesuai permintaan
   const badge = document.getElementById("statusBadgeAccel");
   badge.classList.remove("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
