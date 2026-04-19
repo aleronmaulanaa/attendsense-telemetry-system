@@ -994,7 +994,7 @@ function startGps() {
       sendGps(lt, lg, ac);
     },
     err => logGps("<span style='color:var(--danger)'>[Error GPS] " + err.message + "</span>"),
-    { enableHighAccuracy: true, timeout: 15000 }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
   );
 }
 
