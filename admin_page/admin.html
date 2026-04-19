@@ -546,7 +546,7 @@
           <p class="setting-desc">Tentukan URL Web Apps Script tujuan utama untuk menarik data (Telemetry & Presensi).</p>
           <div class="setting-content">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbxkTG10MokzSyxg0PoItBMrv44EMotIeGWkfP2ZbVzphxXD5HpXr8xzMxxtECG0Syap/exec">
+              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbwMHIkww7fnBBnTQZ8uXNSKOiPe7uyaCqAoBn2LOXTNbynDI2STVVfKB-A6HU6LLt06/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnA" disabled onclick="applyEndpoint('A')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -854,7 +854,9 @@ async function generateQR() {
 async function fetchAttendanceList() {
   const courseId = document.getElementById("listCourseId").value.trim();
   const sessionId = document.getElementById("listSessionId").value.trim();
-  const listBody = document.getElementById("attendance-list-body"); // Ini adalah <ul>
+  
+  // PERBAIKAN: Menggunakan ID yang benar sesuai dengan HTML Anda yaitu "attendeeList"
+  const listBody = document.getElementById("attendeeList"); 
   
   const btn = document.getElementById("btnRefreshList");
   const icon = document.getElementById("refreshIconSvg");
@@ -888,11 +890,10 @@ async function fetchAttendanceList() {
         // RENDER DATA MAHASISWA DENGAN FORMAT ASLI
         result.data.reverse().forEach(row => {
           const li = document.createElement("li");
-          li.className = "attendee-item"; // Menggunakan class CSS asli Anda
+          li.className = "attendee-item"; 
           
           const timeFormatted = new Date(row.time).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
           
-          // Format asli: <strong> untuk ID, <span> untuk Waktu
           li.innerHTML = `<strong>${row.user_id}</strong><span>${timeFormatted}</span>`;
           listBody.appendChild(li);
         });
