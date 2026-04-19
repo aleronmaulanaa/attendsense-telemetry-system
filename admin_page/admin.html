@@ -854,16 +854,15 @@ async function generateQR() {
 async function fetchAttendanceList() {
   const courseId = document.getElementById("listCourseId").value.trim();
   const sessionId = document.getElementById("listSessionId").value.trim();
-  const listBody = document.getElementById("attendance-list-body");
+  const listBody = document.getElementById("attendance-list-body"); // Ini adalah <ul>
   
-  // Element UI (Pastikan ID ini sudah ditambahkan di HTML Langkah 1)
   const btn = document.getElementById("btnRefreshList");
   const icon = document.getElementById("refreshIconSvg");
   const text = document.getElementById("refreshTextSpan");
 
   // JIKA INPUT KOSONG
   if (!courseId || !sessionId) {
-    listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--orange); padding:20px;">Masukkan Course ID & Session ID terlebih dahulu.</td></tr>`;
+    listBody.innerHTML = `<li style="text-align:center; color:var(--orange); padding:20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">Masukkan Course ID & Session ID terlebih dahulu.</li>`;
     return;
   }
 
@@ -881,20 +880,26 @@ async function fetchAttendanceList() {
 
     if (result.ok) {
       listBody.innerHTML = "";
+      
       // JIKA DATA KOSONG ATAU KELAS TIDAK DITEMUKAN
       if (!result.data || result.data.length === 0) {
-        listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada kehadiran atau kelas tidak ditemukan.</td></tr>`;
+        listBody.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">Belum ada kehadiran atau kelas tidak ditemukan.</li>`;
       } else {
+        // RENDER DATA MAHASISWA DENGAN FORMAT ASLI
         result.data.reverse().forEach(row => {
-          const tr = document.createElement("tr");
+          const li = document.createElement("li");
+          li.className = "attendee-item"; // Menggunakan class CSS asli Anda
+          
           const timeFormatted = new Date(row.time).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-          tr.innerHTML = `<td style="font-weight:700;">${row.user_id}</td><td style="text-align:right; font-size:12px; color:var(--text-muted);">${timeFormatted}</td>`;
-          listBody.appendChild(tr);
+          
+          // Format asli: <strong> untuk ID, <span> untuk Waktu
+          li.innerHTML = `<strong>${row.user_id}</strong><span>${timeFormatted}</span>`;
+          listBody.appendChild(li);
         });
       }
     }
   } catch (error) {
-    listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--danger); padding:20px;">Gagal terhubung ke database.</td></tr>`;
+    listBody.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px; font-size:14px; background:var(--badge-absent-bg); border-radius:var(--radius-sm);">Gagal terhubung ke database.</li>`;
   } finally {
     // MATIKAN ANIMASI
     setTimeout(() => {
@@ -915,6 +920,7 @@ const MAX_DATA_POINTS = 20;
 let pollingIntervalAccel = null;
 let lastAccelTimeAdmin = null; 
 let stagnantCountAccel = 0; 
+let isPollingAccelActive = false; // <--- PERBAIKAN 1: Bendera Penjaga
 
 function logMessageAccelAdmin(msg) {
   const logBox = document.getElementById("serverLogAccelAdmin");
@@ -956,6 +962,9 @@ function initAccelCharts() {
 }
 
 async function fetchServerDataAccel() {
+  // <--- PERBAIKAN 2: Jika sistem sudah dihentikan manual, abaikan data yang baru datang
+  if (!isPollingAccelActive) return; 
+
   const targetDevId = document.getElementById("targetDeviceIdAccel").value.trim();
   let fetchUrl = `${getAdminBaseUrl()}?path=telemetry/accel/latest`;
   if (targetDevId !== "") fetchUrl += `&device_id=${targetDevId}`;
@@ -964,23 +973,21 @@ async function fetchServerDataAccel() {
     const response = await fetch(fetchUrl);
     const result = await response.json();
     
+    // <--- PERBAIKAN 3: Cek sekali lagi, karena fetch membutuhkan waktu (Async)
+    if (!isPollingAccelActive) return; 
+
     if(result.ok) {
       let now = new Date().getTime(); 
       let x = result.data.x; let y = result.data.y; let z = result.data.z;
       let actualDevice = result.data.device_id;
       let dataTime = result.data.t;
 
-      // -----------------------------------------------------
-      // LOGIKA STANDBY & AUTO-RESUME (Sesuai Permintaan)
-      // -----------------------------------------------------
       if (lastAccelTimeAdmin === dataTime && targetDevId !== "") {
          stagnantCountAccel++;
          
-         // Mode STANDBY (Jika 3x tarikan data sama)
          if (stagnantCountAccel >= 3) {
              const banner = document.getElementById("accelWarningBanner");
              banner.style.display = "flex";
-             // Atur ke warna Kuning (Standby)
              banner.style.background = "rgba(245,158,11,0.1)";
              banner.style.borderColor = "rgba(245,158,11,0.3)";
              banner.style.color = "var(--orange)";
@@ -997,24 +1004,20 @@ async function fetchServerDataAccel() {
          return; 
       }
       
-      // JIKA KEMBALI ONLINE (RESUME)
       if (stagnantCountAccel >= 3) {
          logMessageAccelAdmin(`<span style="color:var(--accent)">[Resume] Sinyal terdeteksi! Kembali Online...</span>`);
          
          const banner = document.getElementById("accelWarningBanner");
          banner.style.display = "flex";
-         // Ubah notifikasi menjadi Hijau (Online)
          banner.style.background = "rgba(16,185,129,0.1)";
          banner.style.borderColor = "rgba(16,185,129,0.3)";
          banner.style.color = "var(--accent)";
          banner.querySelector("span").innerText = "Sinyal terdeteksi! Kembali Online.";
          
-         // Sembunyikan notifikasi hijau secara otomatis setelah 3 detik
          setTimeout(() => {
            if (stagnantCountAccel === 0) banner.style.display = "none";
          }, 3000);
       } else {
-         // Jika tidak sedang dalam mode standby, pastikan banner tertutup
          if (stagnantCountAccel === 0) document.getElementById("accelWarningBanner").style.display = "none";
       }
       
@@ -1024,9 +1027,7 @@ async function fetchServerDataAccel() {
       const badge = document.getElementById("statusBadgeAccel");
       badge.classList.add("active");
       badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
-      // -----------------------------------------------------
 
-      // FITUR AUTO-LOCK RADAR
       if (targetDevId === "") {
         document.getElementById("targetDeviceIdAccel").value = actualDevice;
         logMessageAccelAdmin(`<span style="color:var(--info)">[Sistem] Radar mengunci pada perangkat aktif: ${actualDevice}</span>`);
@@ -1044,11 +1045,12 @@ async function fetchServerDataAccel() {
       logMessageAccelAdmin(`<span style="color:var(--orange)">Info: ${result.error} (Menunggu data...)</span>`);
     }
   } catch (e) {
-    logMessageAccelAdmin(`<span style="color:var(--danger)">Koneksi ke server Database gagal.</span>`);
+    if(isPollingAccelActive) logMessageAccelAdmin(`<span style="color:var(--danger)">Koneksi ke server Database gagal.</span>`);
   }
 }
 
 function startPollingAccel() {
+  isPollingAccelActive = true; // <--- NYALAKAN BENDERA
   document.getElementById("btnStartAccelAdmin").style.display = "none";
   document.getElementById("btnStopAccelAdmin").style.display = "flex";
   
@@ -1066,10 +1068,10 @@ function startPollingAccel() {
 }
 
 function stopPollingAccel() {
+  isPollingAccelActive = false; // <--- MATIKAN BENDERA (Ini akan memblokir data nyasar)
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
-  // STATUS MATI TOTAL (OFFLINE)
   const badge = document.getElementById("statusBadgeAccel");
   badge.classList.remove("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
