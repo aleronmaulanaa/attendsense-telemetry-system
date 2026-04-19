@@ -874,7 +874,7 @@ let dataX = [], dataY = [], dataZ = [];
 const MAX_DATA_POINTS = 20; 
 let pollingIntervalAccel = null;
 let lastAccelTimeAdmin = null; 
-let stagnantCountAccel = 0; // <--- PERBAIKAN 1: Variabel penghitung toleransi jaringan
+let stagnantCountAccel = 0; 
 
 function logMessageAccelAdmin(msg) {
   const logBox = document.getElementById("serverLogAccelAdmin");
@@ -930,23 +930,47 @@ async function fetchServerDataAccel() {
       let actualDevice = result.data.device_id;
       let dataTime = result.data.t;
 
-      // PERBAIKAN 2: FITUR PENDETEKSI DENGAN TOLERANSI JARINGAN 9 DETIK
+      // -----------------------------------------------------
+      // PERBAIKAN: LOGIKA STANDBY & AUTO-RESUME
+      // -----------------------------------------------------
       if (lastAccelTimeAdmin === dataTime && targetDevId !== "") {
          stagnantCountAccel++;
          
-         // Jika sudah 3 kali tarikan (~9 detik) data tetap sama, baru nyatakan Offline
+         // Jika 3x tarikan (~9 detik) data sama, masuk mode STANDBY (Bukan Offline)
          if (stagnantCountAccel >= 3) {
-             document.getElementById("accelWarningBanner").style.display = "flex";
-             stopPollingAccel(); // Mengembalikan status jadi Offline
-             logMessageAccelAdmin(`<span style="color:var(--orange)">[Warning] Data stagnan. Monitoring dihentikan.</span>`);
+             const banner = document.getElementById("accelWarningBanner");
+             banner.style.display = "flex";
+             banner.querySelector("span").innerText = "Klien sedang tidak mengirim data. Sistem dalam mode Standby...";
+             
+             // Ubah badge menjadi kuning (Standby)
+             const badge = document.getElementById("statusBadgeAccel");
+             badge.classList.remove("active");
+             badge.innerHTML = `<i class="fas fa-circle" style="color:var(--orange)"></i> Standby`;
+
+             // Cetak log SATU KALI saja saat pertama kali masuk mode standby
+             if (stagnantCountAccel === 3) {
+                logMessageAccelAdmin(`<span style="color:var(--orange)">[Standby] Menunggu pergerakan klien selanjutnya...</span>`);
+             }
          }
-         return; // Hentikan fungsi agar grafik tidak menggambar ulang data yang sama
+         // Hentikan eksekusi di sini agar grafik tidak menggambar data usang, 
+         // TETAPI setInterval di latar belakang tetap berjalan memantau!
+         return; 
       }
       
-      // Jika data baru masuk, reset hitungan toleransi
+      // JIKA DATA BARU TIBA-TIBA MASUK (AUTO-RESUME)
+      if (stagnantCountAccel >= 3) {
+         logMessageAccelAdmin(`<span style="color:var(--accent)">[Resume] Sinyal terdeteksi! Melanjutkan Live Stream...</span>`);
+      }
+      
       stagnantCountAccel = 0;
       lastAccelTimeAdmin = dataTime;
+      
+      // Sembunyikan banner dan hijaukan kembali indikator
       document.getElementById("accelWarningBanner").style.display = "none";
+      const badge = document.getElementById("statusBadgeAccel");
+      badge.classList.add("active");
+      badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
+      // -----------------------------------------------------
 
       // FITUR AUTO-LOCK RADAR
       if (targetDevId === "") {
@@ -978,13 +1002,13 @@ function startPollingAccel() {
   badge.classList.add("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
   
-  // PERBAIKAN 3: RESET MEMORI WAKTU & TOLERANSI SAAT TOMBOL MULAI DITEKAN
   lastAccelTimeAdmin = null;
   stagnantCountAccel = 0; 
   document.getElementById("accelWarningBanner").style.display = "none";
 
   logMessageAccelAdmin("Menghubungkan ke Server (Interval 3 Detik)...");
   fetchServerDataAccel(); 
+  // Menyimpan putaran interval
   pollingIntervalAccel = setInterval(fetchServerDataAccel, 3000);
 }
 
@@ -992,13 +1016,14 @@ function stopPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
-  // Mengubah indikator kembali ke Offline sesuai permintaan
+  // Jika tombol Hentikan ditekan manual, barulah status benar-benar Offline mati total
   const badge = document.getElementById("statusBadgeAccel");
   badge.classList.remove("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
 
+  // Matikan putaran interval secara permanen
   clearInterval(pollingIntervalAccel);
-  logMessageAccelAdmin("Pemantauan sensor dihentikan.");
+  logMessageAccelAdmin("Pemantauan sensor dihentikan secara manual.");
 }
 
 

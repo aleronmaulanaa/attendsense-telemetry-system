@@ -973,6 +973,7 @@ function stopSensor() {
 // ==========================================
 const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbxkTG10MokzSyxg0PoItBMrv44EMotIeGWkfP2ZbVzphxXD5HpXr8xzMxxtECG0Syap/exec";
 let watchIdGps = null;
+let lastGpsSendTime = 0; // <--- PERBAIKAN 1: Variabel untuk mencatat waktu terakhir kirim
 
 function logGps(msg) {
   const l = document.getElementById("serverLogGps");
@@ -984,17 +985,26 @@ function startGps() {
   document.getElementById("btnStopGps").style.display = "flex";
   logGps("Mencari sinyal satelit GPS terkuat...");
 
+  lastGpsSendTime = 0; // Reset waktu setiap kali tombol Mulai ditekan
+
   watchIdGps = navigator.geolocation.watchPosition(
     pos => {
       const { latitude: lt, longitude: lg, accuracy: ac } = pos.coords;
+      
+      // UI Peta & Angka tetap di-update secara real-time sehalus mungkin
       document.getElementById("latGps").innerText = lt.toFixed(5);
       document.getElementById("lngGps").innerText = lg.toFixed(5);
       document.getElementById("accGps").innerText = "± " + Math.round(ac) + " Meter";
       
-      sendGps(lt, lg, ac);
+      // <--- PERBAIKAN 2: Logika Pembatas (Throttle) 2 Detik (2000 ms)
+      const now = new Date().getTime();
+      if (now - lastGpsSendTime >= 2000) {
+        sendGps(lt, lg, ac); // Kirim ke server
+        lastGpsSendTime = now; // Catat waktu pengiriman ini
+      }
     },
     err => logGps("<span style='color:var(--danger)'>[Error GPS] " + err.message + "</span>"),
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 2000 } // <--- PERBAIKAN 3: Sinkronkan cache ke 2000ms
   );
 }
 
