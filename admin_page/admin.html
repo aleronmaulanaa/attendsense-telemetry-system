@@ -277,6 +277,17 @@
   
   @keyframes pageFadeIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
   @keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Animasi Putar ke Kiri untuk Loading Modul 1 */
+.spin-animation {
+  animation: spin 1s linear infinite;
+  transform-origin: center;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); } /* <--- Tambahkan tanda minus (-) di sini */
+}
 </style>
 </head>
 <body>
@@ -414,9 +425,13 @@
                 <input type="text" class="input-themed" id="listSessionId" placeholder="Session ID" value="sesi-02" />
               </div>
               
-              <button class="btn-themed btn-secondary" onclick="fetchAttendanceList()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg> Tarik / Refresh Data
-              </button>
+              <button id="btnRefreshList" class="btn-themed btn-secondary" onclick="fetchAttendanceList()" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+  <svg id="refreshIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+    <polyline points="3 3 3 8 8 8"></polyline>
+  </svg> 
+  <span id="refreshTextSpan">Tarik / Refresh Data</span>
+</button>
               
               <ul id="attendeeList" class="attendee-list">
                 <li class="status-text">Klik Tarik Data untuk melihat mahasiswa yang hadir.</li>
@@ -839,29 +854,54 @@ async function generateQR() {
 async function fetchAttendanceList() {
   const courseId = document.getElementById("listCourseId").value.trim();
   const sessionId = document.getElementById("listSessionId").value.trim();
-  const listEl = document.getElementById("attendeeList");
+  const listBody = document.getElementById("attendance-list-body");
+  
+  // Element UI (Pastikan ID ini sudah ditambahkan di HTML Langkah 1)
+  const btn = document.getElementById("btnRefreshList");
+  const icon = document.getElementById("refreshIconSvg");
+  const text = document.getElementById("refreshTextSpan");
 
-  if (listEl.innerHTML.includes("Mengambil data")) return;
+  // JIKA INPUT KOSONG
+  if (!courseId || !sessionId) {
+    listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--orange); padding:20px;">Masukkan Course ID & Session ID terlebih dahulu.</td></tr>`;
+    return;
+  }
+
+  // JIKA SEDANG LOADING, JANGAN JALANKAN LAGI
+  if (btn && btn.disabled) return;
+
+  // NYALAKAN ANIMASI
+  if (btn) btn.disabled = true;
+  if (icon) icon.classList.add("spin-animation");
+  if (text) text.innerText = "Menghubungkan...";
 
   try {
     const response = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=${courseId}&session_id=${sessionId}`);
     const result = await response.json();
 
     if (result.ok) {
-      if (result.data.length === 0) {
-        listEl.innerHTML = `<li class="status-text">Belum ada mahasiswa yang hadir.</li>`;
-        return;
+      listBody.innerHTML = "";
+      // JIKA DATA KOSONG ATAU KELAS TIDAK DITEMUKAN
+      if (!result.data || result.data.length === 0) {
+        listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada kehadiran atau kelas tidak ditemukan.</td></tr>`;
+      } else {
+        result.data.reverse().forEach(row => {
+          const tr = document.createElement("tr");
+          const timeFormatted = new Date(row.time).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+          tr.innerHTML = `<td style="font-weight:700;">${row.user_id}</td><td style="text-align:right; font-size:12px; color:var(--text-muted);">${timeFormatted}</td>`;
+          listBody.appendChild(tr);
+        });
       }
-      listEl.innerHTML = "";
-      const sortedData = result.data.sort((a, b) => new Date(b.time) - new Date(a.time));
-      sortedData.forEach((item) => {
-        const dateObj = new Date(item.time);
-        const timeStr = dateObj.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        listEl.innerHTML += `<li class="attendee-item"><strong>${item.user_id}</strong><span>${timeStr}</span></li>`;
-      });
     }
   } catch (error) {
-    console.error("List Error Fetch");
+    listBody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--danger); padding:20px;">Gagal terhubung ke database.</td></tr>`;
+  } finally {
+    // MATIKAN ANIMASI
+    setTimeout(() => {
+      if (btn) btn.disabled = false;
+      if (icon) icon.classList.remove("spin-animation");
+      if (text) text.innerText = "Tarik / Refresh Data";
+    }, 600);
   }
 }
 
@@ -931,42 +971,56 @@ async function fetchServerDataAccel() {
       let dataTime = result.data.t;
 
       // -----------------------------------------------------
-      // PERBAIKAN: LOGIKA STANDBY & AUTO-RESUME
+      // LOGIKA STANDBY & AUTO-RESUME (Sesuai Permintaan)
       // -----------------------------------------------------
       if (lastAccelTimeAdmin === dataTime && targetDevId !== "") {
          stagnantCountAccel++;
          
-         // Jika 3x tarikan (~9 detik) data sama, masuk mode STANDBY (Bukan Offline)
+         // Mode STANDBY (Jika 3x tarikan data sama)
          if (stagnantCountAccel >= 3) {
              const banner = document.getElementById("accelWarningBanner");
              banner.style.display = "flex";
+             // Atur ke warna Kuning (Standby)
+             banner.style.background = "rgba(245,158,11,0.1)";
+             banner.style.borderColor = "rgba(245,158,11,0.3)";
+             banner.style.color = "var(--orange)";
              banner.querySelector("span").innerText = "Klien sedang tidak mengirim data. Sistem dalam mode Standby...";
              
-             // Ubah badge menjadi kuning (Standby)
              const badge = document.getElementById("statusBadgeAccel");
              badge.classList.remove("active");
              badge.innerHTML = `<i class="fas fa-circle" style="color:var(--orange)"></i> Standby`;
 
-             // Cetak log SATU KALI saja saat pertama kali masuk mode standby
              if (stagnantCountAccel === 3) {
                 logMessageAccelAdmin(`<span style="color:var(--orange)">[Standby] Menunggu pergerakan klien selanjutnya...</span>`);
              }
          }
-         // Hentikan eksekusi di sini agar grafik tidak menggambar data usang, 
-         // TETAPI setInterval di latar belakang tetap berjalan memantau!
          return; 
       }
       
-      // JIKA DATA BARU TIBA-TIBA MASUK (AUTO-RESUME)
+      // JIKA KEMBALI ONLINE (RESUME)
       if (stagnantCountAccel >= 3) {
-         logMessageAccelAdmin(`<span style="color:var(--accent)">[Resume] Sinyal terdeteksi! Melanjutkan Live Stream...</span>`);
+         logMessageAccelAdmin(`<span style="color:var(--accent)">[Resume] Sinyal terdeteksi! Kembali Online...</span>`);
+         
+         const banner = document.getElementById("accelWarningBanner");
+         banner.style.display = "flex";
+         // Ubah notifikasi menjadi Hijau (Online)
+         banner.style.background = "rgba(16,185,129,0.1)";
+         banner.style.borderColor = "rgba(16,185,129,0.3)";
+         banner.style.color = "var(--accent)";
+         banner.querySelector("span").innerText = "Sinyal terdeteksi! Kembali Online.";
+         
+         // Sembunyikan notifikasi hijau secara otomatis setelah 3 detik
+         setTimeout(() => {
+           if (stagnantCountAccel === 0) banner.style.display = "none";
+         }, 3000);
+      } else {
+         // Jika tidak sedang dalam mode standby, pastikan banner tertutup
+         if (stagnantCountAccel === 0) document.getElementById("accelWarningBanner").style.display = "none";
       }
       
       stagnantCountAccel = 0;
       lastAccelTimeAdmin = dataTime;
       
-      // Sembunyikan banner dan hijaukan kembali indikator
-      document.getElementById("accelWarningBanner").style.display = "none";
       const badge = document.getElementById("statusBadgeAccel");
       badge.classList.add("active");
       badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
@@ -1008,7 +1062,6 @@ function startPollingAccel() {
 
   logMessageAccelAdmin("Menghubungkan ke Server (Interval 3 Detik)...");
   fetchServerDataAccel(); 
-  // Menyimpan putaran interval
   pollingIntervalAccel = setInterval(fetchServerDataAccel, 3000);
 }
 
@@ -1016,12 +1069,12 @@ function stopPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
-  // Jika tombol Hentikan ditekan manual, barulah status benar-benar Offline mati total
+  // STATUS MATI TOTAL (OFFLINE)
   const badge = document.getElementById("statusBadgeAccel");
   badge.classList.remove("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
 
-  // Matikan putaran interval secara permanen
+  document.getElementById("accelWarningBanner").style.display = "none";
   clearInterval(pollingIntervalAccel);
   logMessageAccelAdmin("Pemantauan sensor dihentikan secara manual.");
 }
