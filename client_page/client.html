@@ -423,11 +423,7 @@
       <div class="setting-container">
         <div class="section-title" style="margin-top:28px">Portal Pemindai Hadir</div>
         
-        <div class="card" style="border: 1px dashed var(--accent); background: var(--accent-soft);">
-          <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28" style="color:var(--accent)"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Konfigurasi Server Presensi</h2>
-          <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px; font-weight: 500; line-height: 1.6;">Ganti URL di bawah ini dengan URL Apps Script milik kelompok lain jika dosen meminta Anda untuk melakukan uji coba *Cross-Server* (Swap Test).</p>
-          <input type="text" class="input-themed" id="customEndpoint" value="https://script.google.com/macros/s/AKfycbwMHIkww7fnBBnTQZ8uXNSKOiPe7uyaCqAoBn2LOXTNbynDI2STVVfKB-A6HU6LLt06/exec" style="margin-bottom: 0;" />
-        </div>
+        
 
         <div class="card">
           <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28" style="color:var(--text-primary)"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> Scan Kehadiran Kelas</h2>
@@ -777,8 +773,9 @@ function applyEndpoint(dummyArg) {
 // ==========================================
 let html5QrcodeScanner = null;
 
-function getBaseUrlQR() {
-  return document.getElementById("customEndpoint").value.trim();
+function getClientBaseUrl() {
+  // Mengambil URL langsung dari input di Menu Pengaturan
+  return document.getElementById("endpointInputC").value.trim();
 }
 
 async function onScanSuccess(decodedText) {
@@ -820,8 +817,9 @@ async function onScanSuccess(decodedText) {
   };
 
   try {
-    const response = await fetch(`${getBaseUrlQR()}?path=presence/checkin`, {
-      method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+    const response = await fetch(`${getClientBaseUrl()}?path=presence/checkin`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
     });
 
@@ -869,7 +867,6 @@ function restartScanner() {
 // ==========================================
 // 3. LOGIC: ACCELEROMETER
 // ==========================================
-const BASE_URL_ACCEL = "https://script.google.com/macros/s/AKfycbwMHIkww7fnBBnTQZ8uXNSKOiPe7uyaCqAoBn2LOXTNbynDI2STVVfKB-A6HU6LLt06/exec";
 let isRecordingAccel = false;
 let batchDataAccel = [];
 let batchIntervalIdAccel = null;
@@ -915,7 +912,7 @@ async function sendBatchToServerAccel() {
   };
 
   try {
-    const response = await fetch(`${BASE_URL_ACCEL}?path=telemetry/accel`, {
+    const response = await fetch(`${getClientBaseUrl()}?path=telemetry/accel`, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
@@ -971,7 +968,6 @@ function stopSensor() {
 // ==========================================
 // 4. LOGIC: GPS TRACKER
 // ==========================================
-const BASE_URL_GPS = "https://script.google.com/macros/s/AKfycbwMHIkww7fnBBnTQZ8uXNSKOiPe7uyaCqAoBn2LOXTNbynDI2STVVfKB-A6HU6LLt06/exec";
 let watchIdGps = null;
 let lastGpsSendTime = 0; // <--- PERBAIKAN 1: Variabel untuk mencatat waktu terakhir kirim
 
@@ -1010,8 +1006,9 @@ function startGps() {
 
 async function sendGps(lat, lng, acc) {
   try {
-    const res = await fetch(`${BASE_URL_GPS}?path=telemetry/gps`, {
+    const res = await fetch(`${getClientBaseUrl()}?path=telemetry/gps`, {
       method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ device_id: getDeviceId(), ts: new Date().toISOString(), lat, lng, accuracy_m: acc })
     });
     if (res.ok) logGps("<span style='color:var(--info)'>[Terkirim] Paket koordinat berhasil disinkronisasi ke Cloud.</span>");

@@ -130,13 +130,88 @@ function copyPassword(p){navigator.clipboard.writeText(p).then(ok).catch(()=>{co
 
 // Login
 const ACCOUNTS={client:{password:'12345',role:'Client'},admin:{password:'54321',role:'Admin'}};
-function handleLogin(){
-  const u=document.getElementById('usernameInput').value.trim().toLowerCase(),p=document.getElementById('passInput').value,e=document.getElementById('loginError'),a=ACCOUNTS[u];
-  if(a&&a.password===p){
-    currentRole=a.role;
-    showDashboard(a.role);
-  }else{
-    e.classList.add('show');document.getElementById('passInput').value='';setTimeout(()=>e.classList.remove('show'),3000);
+// 1. Tambahkan variabel ini di LUAR fungsi agar bisa mengingat timer sebelumnya
+let loginErrorTimer = null; 
+
+function handleLogin(event) {
+  // Cegah form melakukan refresh otomatis
+  if (event) event.preventDefault();
+
+  const usernameElement = document.getElementById('usernameInput');
+  const passwordElement = document.getElementById('passInput');
+  const errorContainer = document.getElementById('loginError');
+  
+  const u = usernameElement.value.trim().toLowerCase();
+  const p = passwordElement.value;
+  const a = ACCOUNTS[u];
+
+  // Penangkapan tombol yang lebih akurat (kebal dari tekanan tombol Enter keyboard)
+  const btn = document.querySelector('button[onclick*="handleLogin"]') || document.querySelector('.btn-primary');
+  
+  // Simpan teks asli tombol hanya saat pertama kali agar tidak tertimpa ikon loading
+  if (btn && !btn.getAttribute('data-original-text')) {
+    btn.setAttribute('data-original-text', btn.innerHTML);
+  }
+  const originalBtnText = btn ? btn.getAttribute('data-original-text') : 'Masuk';
+
+  errorContainer.classList.remove('show');
+
+  // =========================================================
+  // PENGECEKAN AKUN
+  // =========================================================
+  if (a && a.password === p) {
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i> Memeriksa Lokasi...';
+      btn.disabled = true;
+    }
+
+    if (!navigator.geolocation) {
+      showError("Browser Anda tidak mendukung fitur lokasi GPS.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (btn) btn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i> Mengalihkan...';
+        setTimeout(() => {
+          if (a.role === 'Admin') window.location.href = 'admin_new.html';
+          else window.location.href = 'client_new.html';
+        }, 800);
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          showError("AKSES LOKASI WAJIB! Izinkan lokasi di browser, lalu klik Masuk lagi.");
+        } else {
+          showError("Gagal mendapat lokasi. Pastikan GPS HP menyala.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  } else {
+    // =========================================================
+    // JIKA AKUN SALAH
+    // =========================================================
+    showError("Username atau Password tidak valid!");
+    usernameElement.value = ''; 
+    passwordElement.value = ''; 
+    usernameElement.focus();    
+  }
+
+  // =========================================================
+  // FUNGSI BANTUAN: Menampilkan Error & Mereset Timer
+  // =========================================================
+  function showError(msg) {
+    errorContainer.innerText = msg;
+    errorContainer.classList.add('show');
+    
+    if (btn) {
+      btn.innerHTML = originalBtnText;
+      btn.disabled = false;
+    }
+    
+    // MENCEGAH TIMEOUT STACKING: Hapus timer lama jika ada, lalu buat timer baru
+    if (loginErrorTimer) clearTimeout(loginErrorTimer);
+    loginErrorTimer = setTimeout(() => errorContainer.classList.remove('show'), 8000);
   }
 }
 document.getElementById('passInput').addEventListener('keydown',e=>{if(e.key==='Enter')handleLogin();});
