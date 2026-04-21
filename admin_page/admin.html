@@ -316,6 +316,25 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(-360deg); } /* <--- Tambahkan tanda minus (-) di sini */
 }
+
+/* Style Modal Riwayat Sesi */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+  z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-content {
+  background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: var(--radius);
+  width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; padding: 24px; position: relative;
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.session-history-list { list-style: none; padding: 0; }
+.session-item {
+  padding: 14px; background: var(--bg-secondary); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); margin-bottom: 10px; cursor: pointer; transition: 0.2s;
+}
+.session-item:hover { border-color: var(--accent); background: var(--accent-soft); }
+.session-item .session-info { display: block; font-weight: 700; font-size: 14px; color: var(--text-primary); }
+.session-item .session-time { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
 </style>
 </head>
 <body>
@@ -445,7 +464,13 @@
             </div>
 
             <div class="card">
-              <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28" style="color:var(--text-primary)"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Daftar Kehadiran Live</h2>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+  <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; gap: 12px;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28" style="color:var(--text-primary)"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> 
+    Daftar Kehadiran Live
+  </h2>
+  <button onclick="openHistoryModal()" class="btn-themed btn-secondary" style="width: auto; padding: 8px 16px; font-size: 12px;">Lihat Semua Kelas</button>
+</div>
               
               <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase;">Tarik Data Sesi</label>
               <div class="input-group">
@@ -584,7 +609,7 @@
           <p class="setting-desc">Tentukan URL Web Apps Script tujuan utama untuk menarik data (Telemetry & Presensi).</p>
           <div class="setting-content">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbwMHIkww7fnBBnTQZ8uXNSKOiPe7uyaCqAoBn2LOXTNbynDI2STVVfKB-A6HU6LLt06/exec">
+              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnA" disabled onclick="applyEndpoint('A')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -629,6 +654,17 @@
 
   <div class="bottom-nav-wrapper" id="bottomNavWrapper">
     </div>
+</div>
+
+<div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 style="margin:0; font-size: 18px;">Riwayat Sesi Kelas</h2>
+      <button onclick="document.getElementById('historyModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <ul id="sessionHistoryList" class="session-history-list">
+      </ul>
+  </div>
 </div>
 
 <script>
@@ -821,8 +857,11 @@ function startAutoGenerate() {
   document.getElementById("btnGenerateQr").disabled = true;
   document.getElementById("btnStopQr").style.display = "block";
 
-  generateQR();
-  qrIntervalId = setInterval(generateQR, 25000);
+  // PERBAIKAN: Kirim isManual = true hanya saat pertama kali tombol ditekan
+  generateQR(true); 
+  
+  // PERBAIKAN: Kirim isManual = false untuk refresh otomatis tiap 25 detik
+  qrIntervalId = setInterval(() => generateQR(false), 25000); 
 }
 
 function stopAutoGenerate() {
@@ -841,7 +880,7 @@ function stopAutoGenerate() {
   document.getElementById("qr-container").innerHTML = "";
 }
 
-async function generateQR() {
+async function generateQR(isManual = false) {
   const courseId = document.getElementById("genCourseId").value.trim();
   const sessionId = document.getElementById("genSessionId").value.trim();
   const maxCap = document.getElementById("genMaxCapacity").value.trim();
@@ -850,11 +889,16 @@ async function generateQR() {
 
   qrContainer.innerHTML = "";
   statusEl.innerText = "Merefresh token Server...";
-  statusEl.className = "status-text";
+  
+  // TETAP PERTAHANKAN BARIS INI: Untuk reset warna hijau/merah sebelumnya
+  statusEl.className = "status-text"; 
 
   const payload = {
-    course_id: courseId, session_id: sessionId,
-    max_capacity: parseInt(maxCap), ts: new Date().toISOString(),
+    course_id: courseId, 
+    session_id: sessionId,
+    max_capacity: parseInt(maxCap), 
+    ts: new Date().toISOString(),
+    is_manual: isManual 
   };
 
   try {
@@ -889,27 +933,22 @@ async function generateQR() {
   }
 }
 
+// Perbarui fungsi fetchAttendanceList Anda
 async function fetchAttendanceList() {
   const courseId = document.getElementById("listCourseId").value.trim();
   const sessionId = document.getElementById("listSessionId").value.trim();
-  
-  // PERBAIKAN: Menggunakan ID yang benar sesuai dengan HTML Anda yaitu "attendeeList"
   const listBody = document.getElementById("attendeeList"); 
   
   const btn = document.getElementById("btnRefreshList");
   const icon = document.getElementById("refreshIconSvg");
   const text = document.getElementById("refreshTextSpan");
 
-  // JIKA INPUT KOSONG
   if (!courseId || !sessionId) {
     listBody.innerHTML = `<li style="text-align:center; color:var(--orange); padding:20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">Masukkan Course ID & Session ID terlebih dahulu.</li>`;
     return;
   }
 
-  // JIKA SEDANG LOADING, JANGAN JALANKAN LAGI
   if (btn && btn.disabled) return;
-
-  // NYALAKAN ANIMASI
   if (btn) btn.disabled = true;
   if (icon) icon.classList.add("spin-animation");
   if (text) text.innerText = "Menghubungkan...";
@@ -920,33 +959,77 @@ async function fetchAttendanceList() {
 
     if (result.ok) {
       listBody.innerHTML = "";
-      
-      // JIKA DATA KOSONG ATAU KELAS TIDAK DITEMUKAN
       if (!result.data || result.data.length === 0) {
-        listBody.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">Belum ada kehadiran atau kelas tidak ditemukan.</li>`;
+        listBody.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">Belum ada kehadiran.</li>`;
       } else {
-        // RENDER DATA MAHASISWA DENGAN FORMAT ASLI
         result.data.reverse().forEach(row => {
           const li = document.createElement("li");
           li.className = "attendee-item"; 
-          
           const timeFormatted = new Date(row.time).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
           
-          li.innerHTML = `<strong>${row.user_id}</strong><span>${timeFormatted}</span>`;
+          // Tampilan baru dengan Device ID di tengah
+          li.innerHTML = `
+            <strong>${row.user_id}</strong>
+            <span style="font-family:'Space Mono', monospace; font-size:11px; color:var(--accent);">${row.device_id || 'Unknown'}</span>
+            <span>${timeFormatted}</span>
+          `;
           listBody.appendChild(li);
         });
       }
     }
   } catch (error) {
-    listBody.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px; font-size:14px; background:var(--badge-absent-bg); border-radius:var(--radius-sm);">Gagal terhubung ke database.</li>`;
+    listBody.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px; font-size:14px; background:var(--badge-absent-bg); border-radius:var(--radius-sm);">Gagal terhubung.</li>`;
   } finally {
-    // MATIKAN ANIMASI
     setTimeout(() => {
       if (btn) btn.disabled = false;
       if (icon) icon.classList.remove("spin-animation");
       if (text) text.innerText = "Tarik / Refresh Data";
     }, 600);
   }
+}
+
+// Fungsi Baru untuk Riwayat Sesi
+async function openHistoryModal() {
+  const modal = document.getElementById("historyModal");
+  const list = document.getElementById("sessionHistoryList");
+  modal.style.display = "flex";
+  list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Memuat riwayat...</li>`;
+
+  try {
+    const response = await fetch(`${getAdminBaseUrl()}?path=presence/sessions`);
+    const result = await response.json();
+
+    if (result.ok) {
+      list.innerHTML = "";
+      result.data.forEach(session => {
+        const date = new Date(session.created_at);
+        const dateStr = date.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
+        const timeStr = date.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+        
+        const li = document.createElement("li");
+        li.className = "session-item";
+        li.innerHTML = `
+          <span class="session-info">${session.course_id} - ${session.session_id}</span>
+          <span class="session-time">${dateStr} : ${timeStr}</span>
+        `;
+        li.onclick = () => selectSession(session.course_id, session.session_id);
+        list.appendChild(li);
+      });
+    }
+  } catch (error) {
+    list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Gagal memuat data.</li>`;
+  }
+}
+
+function selectSession(courseId, sessionId) {
+  document.getElementById("listCourseId").value = courseId;
+  document.getElementById("listSessionId").value = sessionId;
+  document.getElementById("historyModal").style.display = "none";
+  fetchAttendanceList(); // Langsung tarik data setelah memilih
+}
+
+function closeHistoryModal(e) {
+  if (e.target.id === "historyModal") e.target.style.display = "none";
 }
 
 // ==========================================
