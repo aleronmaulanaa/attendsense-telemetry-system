@@ -6,6 +6,7 @@
 <title>AttendSense - Admin Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -229,10 +230,37 @@
 
   /* ═══ SPECIFIC UI: ACCELEROMETER ADMIN ═══ */
   .sensor-grid-admin { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .status-badge { font-size: 13px; padding: 6px 16px; border-radius: 20px; font-weight: 700; background: var(--bg-card-hover); color: var(--text-muted); display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--glass-border);}
-  .status-badge.active { background: var(--accent-soft); color: var(--accent); border-color: rgba(16,185,129,0.3); }
-  .status-badge.active i { animation: blink 1s infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
+  /* --- Perbaikan Status Badge Modul 2 --- */
+.status-badge { 
+  font-size: 12px; padding: 6px 14px; border-radius: 20px; font-weight: 800; 
+  display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease;
+  text-transform: uppercase; letter-spacing: 0.5px; border: 1px solid transparent;
+}
+
+/* Status: Offline (Merah Static) */
+.status-badge.status-offline { 
+  background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); 
+}
+.status-badge.status-offline i { color: #ef4444; animation: none; }
+
+/* Status: Live Stream (Hijau Berkedip) */
+.status-badge.status-live { 
+  background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2); 
+}
+.status-badge.status-live i { color: #10b981; animation: blink 1s infinite; }
+
+/* Status: Standby (Merah Berkedip) */
+.status-badge.status-standby { 
+  background: rgba(245, 158, 11, 0.1); 
+  color: #f59e0b; 
+  border-color: rgba(245, 158, 11, 0.2); 
+}
+.status-badge.status-standby i { 
+  color: #f59e0b; 
+  animation: blink 1s infinite; 
+}
+
+@keyframes blink { 50% { opacity: 0; } }
 
   /* ═══ SPECIFIC UI: GPS ADMIN ═══ */
   .gps-map-wrapper { position: relative; width: 100%; height: 500px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--glass-border); z-index: 1;}
@@ -458,15 +486,25 @@
           <div class="card" style="padding: 24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom: 20px; gap:16px;">
               <h2 style="margin:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28" style="color:var(--accent)"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Panel Kontrol Telemetri</h2>
-              <div id="statusBadgeAccel" class="status-badge"><i class="fas fa-circle"></i> Offline</div>
+              <div id="statusBadgeAccel" class="status-badge status-offline"><i class="fas fa-circle"></i> Offline</div>
             </div>
             
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight:600;">Masukkan Device ID untuk difokuskan (opsional):</p>
-            <div class="input-group">
+            <!-- <div class="input-group">
               <input type="text" class="input-themed" id="targetDeviceIdAccel" placeholder="Contoh: DEV-BVLDKLLY" />
               <button id="btnStartAccelAdmin" class="btn-themed btn-primary" style="width:auto;" onclick="startPollingAccel()">Mulai Live Monitor</button>
               <button id="btnStopAccelAdmin" class="btn-themed btn-danger" style="width:auto; display: none;" onclick="stopPollingAccel()">Hentikan</button>
-            </div>
+            </div> -->
+            <div class="input-group">
+  <div style="position: relative; flex: 1;">
+    <input type="text" class="input-themed" id="targetDeviceIdAccel" placeholder="Contoh: DEV-BVLDKLLY" style="padding-right: 40px; margin-bottom: 0;">
+    <button id="clearDeviceIdAccel" title="Bersihkan ID" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 16px; transition: color 0.2s;">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <button id="btnStartAccelAdmin" class="btn-themed btn-primary" style="width:auto;" onclick="startPollingAccel()">Mulai Live Monitor</button>
+  <button id="btnStopAccelAdmin" class="btn-themed btn-danger" style="width:auto; display: none;" onclick="stopPollingAccel()">Hentikan</button>
+</div>
           </div>
 
           <div class="sensor-grid-admin">
@@ -935,6 +973,7 @@ function initAccelCharts() {
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const textColor = isDark ? '#94a3b8' : '#64748b';
   
+  // Konfigurasi Grafik Garis (Live Stream) - Tetap seperti semula
   var optionsRt = {
     series: [{ name: 'Sumbu X', data: [] }, { name: 'Sumbu Y', data: [] }, { name: 'Sumbu Z', data: [] }],
     chart: { id: 'realtimeAdmin', height: 250, type: 'line', foreColor: textColor,
@@ -944,19 +983,41 @@ function initAccelCharts() {
     colors: ['#ef4444', '#10b981', '#3b82f6'],
     dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: 3 },
     xaxis: { type: 'datetime', range: 20000, labels: { datetimeUTC: false } },
-    yaxis: { max: 15, min: -15, tickAmount: 6 }, legend: { show: true, position: 'top' },
+    yaxis: { max: 15, min: -15, tickAmount: 6 }, 
+    legend: { show: true, position: 'top' },
     theme: { mode: isDark ? 'dark' : 'light' }
   };
   realtimeChartAdmin = new ApexCharts(document.querySelector("#chartRealtimeAccel"), optionsRt);
   realtimeChartAdmin.render();
 
+  // Konfigurasi Grafik Batang (Posisi Terakhir) - DENGAN INTEGRASI ANGKA
   var optionsLt = {
     series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
     chart: { type: 'bar', height: 250, toolbar: { show: false }, foreColor: textColor, background: 'transparent' },
     colors: ['#ef4444', '#10b981', '#3b82f6'],
     plotOptions: { bar: { borderRadius: 4, horizontal: false, distributed: true } },
-    dataLabels: { enabled: true }, xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] },
-    yaxis: { max: 15, min: -15 }, theme: { mode: isDark ? 'dark' : 'light' }
+    dataLabels: { enabled: true }, 
+    xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] },
+    yaxis: { max: 15, min: -15 },
+    // ==========================================
+    // INTEGRASI FINAL: Legend + Angka Real-time
+    // ==========================================
+    legend: {
+      show: true,
+      position: 'bottom',
+      fontFamily: 'Space Mono, monospace',
+      fontWeight: 700,
+      fontSize: '13px',
+      markers: { width: 12, height: 12, radius: 2 },
+      formatter: function(val, opts) {
+        // Mengambil nilai terbaru dari data series berdasarkan index
+        const seriesData = opts.w.globals.series[0];
+        const currentVal = seriesData[opts.seriesIndex] !== undefined ? seriesData[opts.seriesIndex] : 0;
+        return val + ": " + currentVal.toFixed(2);
+      }
+    },
+    // ==========================================
+    theme: { mode: isDark ? 'dark' : 'light' }
   };
   latestChartAdmin = new ApexCharts(document.querySelector("#chartLatestAccel"), optionsLt);
   latestChartAdmin.render();
@@ -994,9 +1055,13 @@ async function fetchServerDataAccel() {
              banner.style.color = "var(--orange)";
              banner.querySelector("span").innerText = "Klien sedang tidak mengirim data. Sistem dalam mode Standby...";
              
-             const badge = document.getElementById("statusBadgeAccel");
-             badge.classList.remove("active");
-             badge.innerHTML = `<i class="fas fa-circle" style="color:var(--orange)"></i> Standby`;
+            //  const badge = document.getElementById("statusBadgeAccel");
+            //  badge.classList.remove("active");
+            //  badge.innerHTML = `<i class="fas fa-circle" style="color:var(--orange)"></i> Standby`;
+            const badge = document.getElementById("statusBadgeAccel");
+             // Menghubungkan ke class Kuning yang baru kita buat di CSS
+             badge.className = "status-badge status-standby"; 
+             badge.innerHTML = `<i class="fas fa-circle"></i> Standby`;
 
              if (stagnantCountAccel === 3) {
                 logMessageAccelAdmin(`<span style="color:var(--orange)">[Standby] Menunggu pergerakan klien selanjutnya...</span>`);
@@ -1024,9 +1089,12 @@ async function fetchServerDataAccel() {
       
       stagnantCountAccel = 0;
       lastAccelTimeAdmin = dataTime;
-      
+
+      // const badge = document.getElementById("statusBadgeAccel");
+      // badge.classList.add("active");
+      // badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
       const badge = document.getElementById("statusBadgeAccel");
-      badge.classList.add("active");
+      badge.className = "status-badge status-live"; // Titik Hijau Berkedip
       badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
 
       if (targetDevId === "") {
@@ -1040,7 +1108,12 @@ async function fetchServerDataAccel() {
       if (dataX.length > MAX_DATA_POINTS) { dataX.shift(); dataY.shift(); dataZ.shift(); }
 
       realtimeChartAdmin.updateSeries([ { name: 'Sumbu X', data: dataX }, { name: 'Sumbu Y', data: dataY }, { name: 'Sumbu Z', data: dataZ } ]);
-      latestChartAdmin.updateSeries([{ name: 'Nilai Terbaru', data: [x, y, z] }]);
+      latestChartAdmin.updateOptions({
+        series: [{
+          name: 'Nilai Terbaru',
+          data: [x, y, z]
+        }]
+      });
 
     } else {
       logMessageAccelAdmin(`<span style="color:var(--orange)">Info: ${result.error} (Menunggu data...)</span>`);
@@ -1066,6 +1139,8 @@ function startPollingAccel() {
   logMessageAccelAdmin("Menghubungkan ke Server (Interval 3 Detik)...");
   fetchServerDataAccel(); 
   pollingIntervalAccel = setInterval(fetchServerDataAccel, 3000);
+
+  updateClearButtonVisibility();
 }
 
 function stopPollingAccel() {
@@ -1073,14 +1148,43 @@ function stopPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
+  // const badge = document.getElementById("statusBadgeAccel");
+  // badge.classList.remove("active");
+  // badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
   const badge = document.getElementById("statusBadgeAccel");
-  badge.classList.remove("active");
+  badge.className = "status-badge status-offline"; // Titik Merah Diam
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
 
   document.getElementById("accelWarningBanner").style.display = "none";
   clearInterval(pollingIntervalAccel);
   logMessageAccelAdmin("Pemantauan sensor dihentikan secara manual.");
+
+  updateClearButtonVisibility();
 }
+
+// Fungsi untuk mengatur visibilitas tombol silang
+function updateClearButtonVisibility() {
+  const input = document.getElementById("targetDeviceIdAccel");
+  const clearBtn = document.getElementById("clearDeviceIdAccel");
+  
+  // Syarat: Ada isinya DAN status sedang offline (isPollingAccelActive adalah false)
+  if (input.value.trim() !== "" && !isPollingAccelActive) {
+    clearBtn.style.display = "block";
+  } else {
+    clearBtn.style.display = "none";
+  }
+}
+
+// Daftarkan event pengetikan pada input
+document.getElementById("targetDeviceIdAccel").addEventListener("input", updateClearButtonVisibility);
+
+// Logika saat tombol silang diklik
+document.getElementById("clearDeviceIdAccel").onclick = function() {
+  const input = document.getElementById("targetDeviceIdAccel");
+  input.value = ""; // Kosongkan teks
+  updateClearButtonVisibility(); // Sembunyikan tombol kembali
+  input.focus(); // Kembalikan kursor ke input
+};
 
 
 // ==========================================

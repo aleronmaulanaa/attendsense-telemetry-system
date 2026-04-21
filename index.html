@@ -174,8 +174,8 @@ function handleLogin(event) {
       (position) => {
         if (btn) btn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:8px;"></i> Mengalihkan...';
         setTimeout(() => {
-          if (a.role === 'Admin') window.location.href = 'admin_new.html';
-          else window.location.href = 'client_new.html';
+          if (a.role === 'Admin') window.location.href = 'admin_page/admin.html';
+          else window.location.href = 'client_page/client.html';
         }, 800);
       },
       (error) => {
