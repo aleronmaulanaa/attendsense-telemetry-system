@@ -220,9 +220,54 @@
   .setting-row-info .setting-value{font-size:12px;color:var(--text-muted);font-weight:600;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
 
   /* ═══ SPECIFIC UI: QR DOSEN ═══ */
+  /* .dashboard-grid-qr { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; } */
   .dashboard-grid-qr { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-  #qr-container { display: flex; justify-content: center; margin-top: 24px; padding: 24px; background: var(--bg-secondary); border-radius: 16px; box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05); }
-  .attendee-list { list-style: none; padding: 0; margin: 20px 0 0 0; max-height: 350px; overflow-y: auto; }
+.dashboard-grid-qr > .card { display: flex; flex-direction: column; min-height: 0; }
+
+#qr-container { 
+  display: flex; 
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px; 
+  padding: 40px 24px;
+  background: var(--bg-secondary); 
+  border-radius: 16px; 
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+  min-height: 320px;
+  position: relative;
+}
+#qr-container canvas,
+#qr-container img {
+  background-color: #ffffff !important;
+  padding: 16px; 
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+  .qr-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-muted);
+    opacity: 0.2;
+    pointer-events: none;
+  }
+  .qr-placeholder i { font-size: 80px; margin-bottom: 16px; }
+  .qr-placeholder span { 
+    font-size: 18px; 
+    font-weight: 800; 
+    letter-spacing: 4px; 
+    font-family: 'Space Mono', monospace; 
+  }
+  /* .attendee-list { list-style: none; padding: 0; margin: 20px 0 0 0; max-height: 350px; overflow-y: auto; } */
+  .attendee-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0 0;
+  flex: 1 1 0;        /* basis 0, bukan auto */
+  min-height: 0;      /* kritis: izinkan shrinking di bawah ukuran konten */
+  overflow-y: auto;
+}
   .attendee-item { padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center; font-size: 14px; margin-bottom: 8px; transition: 0.2s;}
   .attendee-item:hover { border-color: var(--accent); }
   .attendee-item strong { color: var(--text-primary); font-weight: 700; flex: 1; font-family: 'Space Mono', monospace; }
@@ -459,7 +504,12 @@
               <button id="btnGenerateQr" class="btn-themed btn-primary" onclick="startAutoGenerate()">Mulai Broadcast Sesi (Auto-Refresh 25s)</button>
               <button id="btnStopQr" class="btn-themed btn-danger" onclick="stopAutoGenerate()" style="display: none; margin-top: 10px;">Hentikan Sesi Kelas</button>
               
-              <div id="qr-container"></div>
+              <div id="qr-container">
+  <div class="qr-placeholder" id="qrPlaceholder">
+    <i class="fas fa-qrcode"></i>
+    <span>QR CODE</span>
+  </div>
+</div>
               <p id="genStatus" class="status-text"></p>
             </div>
 
@@ -469,7 +519,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="28" height="28" style="color:var(--text-primary)"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> 
     Daftar Kehadiran Live
   </h2>
-  <button onclick="openHistoryModal()" class="btn-themed btn-secondary" style="width: auto; padding: 8px 16px; font-size: 12px;">Lihat Semua Kelas</button>
+  <button onclick="openHistoryModal()" class="btn-themed btn-secondary" style="width: auto; padding: 8px 16px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+  <i class="fas fa-clock-rotate-left" style="font-size: 13px;"></i> Lihat Semua Kelas
+</button>
 </div>
               
               <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase;">Tarik Data Sesi</label>
@@ -606,7 +658,7 @@
             <div class="setting-icon endpoint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
             <h3 style="font-size:18px; font-weight:800; margin:0; color:var(--text-primary);">Target Endpoint Database</h3>
           </div>
-          <p class="setting-desc">Tentukan URL Web Apps Script tujuan utama untuk menarik data (Telemetry & Presensi).</p>
+          <p class="setting-desc">Ganti URL ini dengan URL Apps Script milik server lain jika ingin menguji transmisi data ke server mereka (Swap Test).</p>
           <div class="setting-content">
             <div class="input-group">
               <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec">
@@ -638,7 +690,7 @@
             <div class="setting-icon logout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
             <h3 style="font-size:18px; font-weight:800; margin:0; color:var(--text-primary);">Sesi Pengguna</h3>
           </div>
-          <p class="setting-desc">Keluar dari perangkat saat ini. Anda perlu otentikasi kembali untuk mengakses layanan admin.</p>
+          <p class="setting-desc">Keluar dari sesi saat ini. Anda perlu login kembali untuk mengakses dashboard.</p>
           <div class="setting-row">
             <div class="setting-row-info">
               <div class="setting-label">Sesi Status</div>
@@ -865,19 +917,32 @@ function startAutoGenerate() {
 }
 
 function stopAutoGenerate() {
+  // 1. Hentikan interval
   clearInterval(qrIntervalId);
   qrIntervalId = null;
 
+  // 2. Buka kembali kunci input
   document.getElementById("genCourseId").disabled = false;
   document.getElementById("genSessionId").disabled = false;
   document.getElementById("genMaxCapacity").disabled = false;
 
+  // 3. Kembalikan tombol ke keadaan semula
   document.getElementById("btnGenerateQr").innerText = "Mulai Broadcast Sesi (Auto-Refresh 25s)";
   document.getElementById("btnGenerateQr").disabled = false;
   document.getElementById("btnStopQr").style.display = "none";
+
+  // 4. Tampilkan Placeholder QR Code
+  const qrContainer = document.getElementById("qr-container");
+  qrContainer.innerHTML = `
+    <div class="qr-placeholder" id="qrPlaceholder">
+      <i class="fas fa-qrcode"></i>
+      <span>QR CODE</span>
+    </div>
+  `;
+  
+  // 5. Reset status teks menjadi netral
   document.getElementById("genStatus").innerText = "Sesi dihentikan.";
-  document.getElementById("genStatus").className = "status-text error";
-  document.getElementById("qr-container").innerHTML = "";
+  document.getElementById("genStatus").className = "status-text";
 }
 
 async function generateQR(isManual = false) {
@@ -1001,20 +1066,31 @@ async function openHistoryModal() {
 
     if (result.ok) {
       list.innerHTML = "";
-      result.data.forEach(session => {
-        const date = new Date(session.created_at);
-        const dateStr = date.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
-        const timeStr = date.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-        
-        const li = document.createElement("li");
-        li.className = "session-item";
-        li.innerHTML = `
-          <span class="session-info">${session.course_id} - ${session.session_id}</span>
-          <span class="session-time">${dateStr} : ${timeStr}</span>
-        `;
-        li.onclick = () => selectSession(session.course_id, session.session_id);
-        list.appendChild(li);
-      });
+      
+      // LOGIKA BARU: Cek jika data kosong
+      if (!result.data || result.data.length === 0) {
+        list.innerHTML = `
+          <li style="text-align:center; color:var(--text-muted); padding:30px 20px; font-size:14px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px dashed var(--glass-border);">
+            <div style="margin-bottom: 10px;"><i class="fas fa-folder-open" style="font-size: 24px; opacity: 0.5;"></i></div>
+            Belum ada riwayat sesi kelas yang dibuat.
+          </li>`;
+      } else {
+        // Jika ada data, tampilkan seperti biasa
+        result.data.forEach(session => {
+          const date = new Date(session.created_at);
+          const dateStr = date.toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'});
+          const timeStr = date.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+          
+          const li = document.createElement("li");
+          li.className = "session-item";
+          li.innerHTML = `
+            <span class="session-info">${session.course_id} & ${session.session_id}</span>
+            <span class="session-time">${dateStr} : ${timeStr}</span>
+          `;
+          li.onclick = () => selectSession(session.course_id, session.session_id);
+          list.appendChild(li);
+        });
+      }
     }
   } catch (error) {
     list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Gagal memuat data.</li>`;
