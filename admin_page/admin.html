@@ -208,14 +208,15 @@
   .history-icon.absent{background:var(--badge-absent-bg);color:var(--badge-absent-color)}
 
   /* ═══ SPECIFIC UI: SETTING FIX ═══ */
-  .setting-card-header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
-  .setting-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .setting-card-header{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+  .setting-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .setting-icon svg{width:22px;height:22px}
   .setting-icon.endpoint{background:var(--accent-soft);color:var(--accent)}
   .setting-icon.theme{background:rgba(245,158,11,.1);color:var(--orange)}
   .setting-icon.logout{background:var(--badge-absent-bg);color:var(--danger)}
-  .setting-desc{font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;padding-left:64px}
-  .setting-content{padding-left:64px}
-  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-left:64px;flex-wrap:wrap}
+  .setting-desc{font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;padding-left:56px}
+  .setting-content{padding-left:56px}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-left:56px;flex-wrap:wrap}
   .setting-row-info .setting-label{font-size:14px;color:var(--text-primary);font-weight:700}
   .setting-row-info .setting-value{font-size:12px;color:var(--text-muted);font-weight:600;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
 
@@ -659,12 +660,21 @@
             <h3 style="font-size:18px; font-weight:800; margin:0; color:var(--text-primary);">Target Endpoint Database</h3>
           </div>
           <p class="setting-desc">Ganti URL ini dengan URL Apps Script milik server lain jika ingin menguji transmisi data ke server mereka (Swap Test).</p>
-          <div class="setting-content">
-            <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec">
-            </div>
-            <button class="btn-themed btn-primary" id="applyBtnA" disabled onclick="applyEndpoint('A')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
-          </div>
+         <div class="setting-content">
+  <div class="input-group">
+    <div style="position: relative; flex: 1;">
+      <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec" style="padding-right: 40px; margin-bottom: 0;">
+      <button id="resetEndpointBtn" title="Kembalikan ke Default URL" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 16px; transition: color 0.2s;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+  <button class="btn-themed" id="applyBtnA" disabled onclick="applyEndpointWithAnimation()" style="width: auto; padding: 12px 24px; transition: all 0.3s ease;">
+    <i id="applyEndpointLoading" class="fas fa-spinner spin-animation" style="display: none; margin-right: 8px;"></i>
+    <i id="applyEndpointSuccess" class="fas fa-check" style="display: none; margin-right: 8px;"></i>
+    <span id="applyEndpointText">Terapkan Endpoint Baru</span>
+  </button>
+</div>
         </div>
 
         <div class="card" style="padding: 24px 28px;">
@@ -674,15 +684,17 @@
           </div>
           <p class="setting-desc">Ubah tema antarmuka antara mode gelap dan mode terang sesuai preferensi visual Anda.</p>
           <div class="setting-row">
-            <div class="setting-row-info">
-              <div class="setting-label">Tema Saat Ini</div>
-              <div class="setting-value" id="themeValueA">Mode Gelap</div>
-            </div>
-            <button class="btn-themed btn-secondary" style="width:auto; padding: 10px 20px;" onclick="toggleTheme();updateThemeLabels();">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" style="margin-right:8px;"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-              <span id="themeBtnLabelA">Ganti Tema</span>
-            </button>
-          </div>
+  <div class="setting-row-info">
+    <div class="setting-label">Tema Saat Ini</div>
+    <div class="setting-value" id="themeValueA">Mode Gelap</div>
+  </div>
+  <button class="btn-themed btn-secondary" style="width:auto; padding: 10px 20px;" onclick="toggleTheme();updateThemeLabels();">
+    <span id="themeBtnIconA" style="margin-right:8px; display:flex; align-items:center;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+    </span>
+    <span id="themeBtnLabelA">Ganti ke Mode Terang</span>
+  </button>
+</div>
         </div>
 
         <div class="card" style="padding: 24px 28px;">
@@ -739,8 +751,21 @@ function updateThemeLabels(){
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   const v = document.getElementById('themeValueA');
   const l = document.getElementById('themeBtnLabelA');
+  const iconContainer = document.getElementById('themeBtnIconA');
+
   if(v) v.textContent = isDark ? 'Mode Gelap' : 'Mode Terang';
   if(l) l.textContent = isDark ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap';
+
+  // Logika pertukaran icon secara real-time
+  if(iconContainer) {
+    if(isDark) {
+      // Menampilkan Icon Sun (karena tombol menawarkan opsi untuk pindah ke terang)
+      iconContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
+    } else {
+      // Menampilkan Icon Moon
+      iconContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>';
+    }
+  }
 }
 
 function getBreakpoint(w){if(w>=1100)return'large';if(w>=768)return'medium';return'small';}
@@ -789,15 +814,86 @@ function switchView(view){
 
 function handleLogout(){ window.location.href = '../index.html'; }
 
+const DEFAULT_ENDPOINT = "https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec";
 const endpointInput = document.getElementById('endpointInputA');
 const applyBtn = document.getElementById('applyBtnA');
-let currentEndpoint = endpointInput ? endpointInput.value : '';
+const resetEndpointBtn = document.getElementById('resetEndpointBtn');
+const applyEndpointLoading = document.getElementById('applyEndpointLoading');
+const applyEndpointSuccess = document.getElementById('applyEndpointSuccess');
+const applyEndpointText = document.getElementById('applyEndpointText');
 
-if (endpointInput && applyBtn) {
-  endpointInput.addEventListener('input', () => { applyBtn.disabled = (endpointInput.value === currentEndpoint); });
+// Simpan endpoint yang sedang "aktif" di sistem
+let currentEndpoint = endpointInput ? endpointInput.value : DEFAULT_ENDPOINT;
+
+function checkEndpointState() {
+  const val = endpointInput.value.trim();
+  const isDefault = (val === DEFAULT_ENDPOINT);
+  const isApplied = (val === currentEndpoint);
+
+  // 1. Update Teks Tombol (Default vs Baru)
+  applyEndpointText.innerText = isDefault ? "Terapkan Endpoint Default" : "Terapkan Endpoint Baru";
+
+  // 2. Kontrol Tombol Silang (Muncul hanya jika bukan default)
+  resetEndpointBtn.style.display = isDefault ? 'none' : 'block';
+
+  // 3. Reset Status Animasi (Sembunyikan centang jika user mulai mengetik lagi)
+  applyEndpointLoading.style.display = 'none';
+  applyEndpointSuccess.style.display = 'none';
+
+  // 4. Update Warna dan Status Tombol
+  if (isApplied) {
+    // Jika input sama dengan yang sedang aktif -> Abu-abu & Disabled
+    applyBtn.disabled = true;
+    applyBtn.style.background = 'var(--disabled-bg)';
+    applyBtn.style.color = 'var(--disabled-color)';
+    applyBtn.style.borderColor = 'var(--glass-border)';
+    applyBtn.style.boxShadow = 'none';
+  } else {
+    // Jika input berbeda (ingin diganti) -> Hijau & Enabled
+    applyBtn.disabled = false;
+    applyBtn.style.background = '#10b981'; // Hijau
+    applyBtn.style.color = '#fff';
+    applyBtn.style.borderColor = '#10b981';
+    applyBtn.style.boxShadow = '0 4px 15px rgba(16,185,129,0.3)';
+  }
 }
 
-function applyEndpoint(dummy) { currentEndpoint = endpointInput.value; applyBtn.disabled = true; }
+if (endpointInput && applyBtn) {
+  endpointInput.addEventListener('input', checkEndpointState);
+
+  // Logika Tombol Silang (X)
+  resetEndpointBtn.addEventListener('click', () => {
+    endpointInput.value = DEFAULT_ENDPOINT;
+    checkEndpointState(); // Trigger update UI (teks tombol akan berubah ke Default)
+  });
+
+  // Inisialisasi awal
+  checkEndpointState();
+}
+
+function applyEndpointWithAnimation() {
+  // Mulai animasi loading
+  applyBtn.disabled = true;
+  applyEndpointLoading.style.display = 'inline-block';
+  applyEndpointSuccess.style.display = 'none';
+
+  setTimeout(() => {
+    // Selesai loading -> Munculkan Centang
+    applyEndpointLoading.style.display = 'none';
+    applyEndpointSuccess.style.display = 'inline-block';
+
+    // Update endpoint yang aktif
+    currentEndpoint = endpointInput.value.trim();
+    
+    // Tombol akan otomatis menjadi abu-abu (disabled) karena currentEndpoint sudah sama dengan input
+    applyBtn.style.background = 'var(--disabled-bg)';
+    applyBtn.style.color = 'var(--disabled-color)';
+    applyBtn.style.borderColor = 'var(--glass-border)';
+  }, 1500);
+}
+
+// Memastikan fungsi getAdminBaseUrl tetap tersedia untuk modul lain
+function getAdminBaseUrl() { return document.getElementById("endpointInputA").value.trim(); }
 function getAdminBaseUrl() { return document.getElementById("endpointInputA").value.trim(); }
 
 // --- Dummy Charts Base Admin Home ---
