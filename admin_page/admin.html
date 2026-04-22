@@ -318,8 +318,8 @@
   .user-dot { width: 14px; height: 14px; background: #f97316; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
   
   .gps-btn-group { display: flex; flex-direction: column; gap: 8px; }
-  .gps-btn { padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1px solid var(--glass-border); background: var(--bg-secondary); color: var(--text-primary); transition: 0.2s; display:flex; align-items:center; justify-content:center; gap:8px;}
-  .gps-btn:hover { background: var(--bg-card-hover); }
+  .gps-btn { padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; border: 1px solid var(--glass-border); background: var(--bg-secondary); color: var(--text-primary); transition: all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px;}
+  .gps-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
   .gps-btn.active { background: var(--info); color: white; border-color: var(--info); }
   .gps-btn.danger { color: var(--danger); border-color: rgba(239,68,68,0.3); }
   .gps-btn.danger:hover { background: var(--badge-absent-bg); }
@@ -1216,11 +1216,33 @@ let lastAccelTimeAdmin = null;
 let stagnantCountAccel = 0; 
 let isPollingAccelActive = false; // <--- PERBAIKAN 1: Bendera Penjaga
 
-function logMessageAccelAdmin(msg) {
+function logMessageAccelAdmin(msg, dataTimestamp = null) {
   const logBox = document.getElementById("serverLogAccelAdmin");
-  const time = new Date().toLocaleTimeString('id-ID');
-  if(logBox.innerHTML.includes("Menunggu perintah")) logBox.innerHTML = "";
-  const newLog = `<div><span style="color:var(--text-muted)">[${time}]</span> ${msg}</div>`;
+
+  // Fungsi bantuan internal untuk memformat waktu berulang-ulang
+  const formatTime = (dateObj) => {
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    const timeStr = dateObj.toLocaleTimeString('id-ID');
+    return `${day}/${month}/${year} : ${timeStr}`;
+  };
+
+  // 1. Waktu Saat Ini (Waktu dashboard Anda menarik data / mencetak log)
+  const localFetchTime = formatTime(new Date());
+
+  // 2. Waktu Aktual Sensor (Hanya dieksekusi jika dataTimestamp dikirimkan)
+  let finalMsg = msg;
+  if (dataTimestamp) {
+    const sensorTime = formatTime(new Date(dataTimestamp));
+    // Menambahkan panah dan waktu sensor di sebelah kanan pesan
+    finalMsg = `${msg} <span style="color:var(--text-muted); margin-left:8px; font-family:'Space Mono', monospace;">-> [${sensorTime}]</span>`;
+  }
+
+  if (logBox.innerHTML.includes("Menunggu perintah")) logBox.innerHTML = "";
+  
+  // 3. Merakit dan menampilkan log akhir
+  const newLog = `<div><span style="color:var(--text-muted)">[${localFetchTime}]</span> ${finalMsg}</div>`;
   logBox.innerHTML = newLog + logBox.innerHTML;
 }
 
@@ -1357,7 +1379,7 @@ async function fetchServerDataAccel() {
         logMessageAccelAdmin(`<span style="color:var(--info)">[Sistem] Radar mengunci pada perangkat aktif: ${actualDevice}</span>`);
       }
 
-      logMessageAccelAdmin(`<span style="color:var(--text-primary)">[${actualDevice}]</span> X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)}`);
+      logMessageAccelAdmin(`<span style="color:var(--text-primary)">[${actualDevice}]</span> X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)}`, dataTime);
 
       dataX.push([now, x]); dataY.push([now, y]); dataZ.push([now, z]);
       if (dataX.length > MAX_DATA_POINTS) { dataX.shift(); dataY.shift(); dataZ.shift(); }
@@ -1514,9 +1536,14 @@ function filterMapMarkers() {
       document.getElementById("detLng").innerText = data.lng.toFixed(5);
       document.getElementById("detAcc").innerText = "± " + Math.round(data.accuracy_m) + " Meter";
       
-      // Format jam agar lebih mudah dibaca
-      const timeObj = new Date(data.ts);
-      document.getElementById("detTs").innerText = timeObj.toLocaleTimeString('id-ID') + " WIB";
+      // Format tanggal dan jam agar lebih mudah dibaca
+const timeObj = new Date(data.ts);
+const day = String(timeObj.getDate()).padStart(2, '0');
+const month = String(timeObj.getMonth() + 1).padStart(2, '0');
+const year = timeObj.getFullYear();
+const timeString = timeObj.toLocaleTimeString('id-ID');
+
+document.getElementById("detTs").innerText = `${day}/${month}/${year} : ${timeString} WIB`;
       
       detailPanel.style.display = "block"; // Munculkan panel
     }
@@ -1590,10 +1617,10 @@ function stopHistoryModeGps() {
 
 function centerToDeviceGps() {
   const devId = document.getElementById("deviceListGps").value;
-  // Jika memilih semua perangkat, kembalikan kamera ke tengah default
+  
+  // Jika belum memilih perangkat dari dropdown, munculkan notifikasi (alert)
   if (!devId) {
-    mapAdminObj.setView([-7.2575, 112.7521], 13);
-    return;
+    return alert("Pilih perangkat spesifik dari dropdown terlebih dahulu untuk memusatkan kamera.");
   }
 
   // Jika memfokuskan 1 perangkat, zoom tepat ke atas perangkat tersebut
