@@ -381,6 +381,20 @@
 .session-item:hover { border-color: var(--accent); background: var(--accent-soft); }
 .session-item .session-info { display: block; font-weight: 700; font-size: 14px; color: var(--text-primary); }
 .session-item .session-time { font-size: 11px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+
+/* --- TAMBAHAN CSS HOME ADMIN --- */
+.device-badge {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px;
+  background: var(--bg-card); border: 1px solid var(--glass-border);
+  border-radius: 20px; font-size: 12px; color: var(--text-muted);
+  font-weight: 500; transition: all var(--transition);
+}
+.device-badge svg { width: 14px; height: 14px; color: var(--text-secondary); }
+.device-name { color: var(--text-secondary); font-weight: 600; }
+.device-sep { color: var(--glass-border); margin: 0 2px; }
+.device-id { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-muted); }
+
+/* Menggunakan kembali modal-overlay dan modal-content yang sudah ada di admin.html */
 </style>
 </head>
 <body>
@@ -444,7 +458,7 @@
       </div>
     </div>
 
-    <div class="view-panel active" id="admin-home">
+    <!-- <div class="view-panel active" id="admin-home">
       <div class="content-container">
         <div class="dash-section" style="padding-top:16px">
           <div class="section-title">Simulator Status Server</div>
@@ -477,6 +491,88 @@
             <div class="card-header"><h3>Log Aktivitas Sistem</h3><div class="card-icon" style="background:rgba(99,102,241,.1);color:#a5b4fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div></div>
             <div class="log-console" id="logConsole">
               <span class="log-line"><span class="log-time">[--:--:--]</span> Sistem Admin siap. Silakan navigasi ke modul yang diinginkan.</span>
+            </div>
+          </div>
+        </div>
+        <div class="dash-footer"><div class="dash-footer-text">AttendSense <span>Admin System</span></div></div>
+      </div>
+    </div> -->
+    <div class="view-panel active" id="admin-home">
+      <div class="content-container">
+        <div class="dash-section" style="padding-top:16px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+             <div class="section-title" style="margin-bottom:0; flex:1;">Panel Kontrol Pemantauan</div>
+             <button onclick="openStudentModal()" class="btn-themed btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;">
+               <i class="fas fa-users" style="margin-right:6px;"></i> Lihat Semua Mahasiswa
+             </button>
+          </div>
+
+          <div class="ctrl-panel" style="flex-direction: column; align-items: stretch; gap: 16px;">
+             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                 <div class="status-badge status-offline" id="homeStatusBadge"><i class="fas fa-circle"></i> Offline</div>
+                 <div class="device-badge" id="homeDeviceBadge" style="display:none; margin:0;">
+                    <svg id="homeDeviceIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <span class="device-name" id="homeDeviceOS">macOS</span>
+                    <span class="device-sep">•</span>
+                    <span class="device-id" id="homeDeviceIDText">DEV-XXXXX</span>
+                 </div>
+             </div>
+             <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <input class="ctrl-input" type="text" id="homeMonitorInput" placeholder="Masukkan NIM atau Device ID..." style="flex:1; min-width:200px;" oninput="updateHomeDeviceBadge()">
+                <button class="ctrl-btn btn-primary" id="homeMonitorBtn" onclick="toggleHomeMonitor()" style="width:auto;">Mulai Live Monitor</button>
+             </div>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="section-title">Menu Utama</div>
+          <div class="admin-grid">
+            
+            <div class="card" style="padding:20px; display:flex; flex-direction:column;">
+              <div class="card-header"><h3>MAP</h3><div class="card-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div></div>
+              <div class="gps-map-wrapper" style="height:220px; flex:1; position:relative; border-radius:8px; border:1px solid var(--glass-border);">
+                 <div id="homeMapAdmin" style="width:100%; height:100%; background:var(--bg-secondary); border-radius:8px; z-index:1;"></div>
+              </div>
+              <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+                 <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Lat & Lng <strong id="homeMapCoords" style="color:var(--text-primary); font-family:'Space Mono',monospace; font-size:13px; margin-left:6px;">- , -</strong></span>
+                 <button class="btn-themed btn-secondary" style="width:auto; padding:8px 14px; font-size:12px;" onclick="switchView('gps')">Lihat Jejak (Polyline)</button>
+              </div>
+            </div>
+
+            <div class="card" style="padding:20px;">
+              <div class="card-header"><h3>Posisi Terakhir Perangkat</h3><div class="card-icon violet"><i class="fas fa-chart-bar"></i></div></div>
+              <div id="homeChartLatest" style="min-height:220px;"></div>
+            </div>
+
+            <div class="card" style="padding:20px; display:flex; flex-direction:column;">
+              <div class="card-header">
+                 <h3>Data Kehadiran</h3>
+                 <div class="card-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0113 0"/></svg>
+                 Client: <span style="color:var(--text-secondary);font-weight:700; font-family:'Space Mono',monospace;" id="homeKehadiranClient">-</span>
+              </div>
+              <ul class="kehadiran-list" id="homeKehadiranList" style="list-style:none; padding:0; margin:0; flex:1; overflow-y:auto; max-height:220px;">
+                 <li class="status-text" style="font-size:12px;">Pilih mahasiswa di Panel Kontrol untuk memantau data.</li>
+              </ul>
+            </div>
+
+            <div class="card" style="padding:20px;">
+              <div class="card-header"><h3>Grafik Arus Data (Live Stream)</h3><div class="card-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div></div>
+              <div id="homeChartRealtime" style="min-height:220px;"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="card" style="padding:20px; margin-bottom:0;">
+            <div class="card-header"><h3>Log Tarikan Data Server</h3><div class="card-icon" style="background:rgba(99,102,241,.1);color:#a5b4fc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg></div></div>
+            <div class="log-console log-box-themed" id="homeLogConsole" style="height:150px; margin-top:0;">
+              <div style="color: var(--text-secondary)">[Sistem] Siap. Masukkan NIM/Device ID lalu klik 'Mulai Live Monitor'.</div>
             </div>
           </div>
         </div>
@@ -720,6 +816,20 @@
     </div>
 </div>
 
+<div id="studentModal" class="modal-overlay" onclick="closeStudentModal(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 style="margin:0; font-size: 18px;">Daftar Mahasiswa Aktif</h2>
+      <button onclick="closeStudentModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="margin-bottom: 12px; font-size:12px; color:var(--text-muted); padding-bottom:8px; border-bottom:1px solid var(--glass-border);">
+      Sesi Dipilih: <strong id="studentModalSession" style="color:var(--text-primary);"></strong>
+    </div>
+    <ul id="studentModalList" class="session-history-list" style="max-height:350px; overflow-y:auto; margin:0; padding:0;">
+    </ul>
+  </div>
+</div>
+
 <div id="historyModal" class="modal-overlay" onclick="closeHistoryModal(event)">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-header">
@@ -896,94 +1006,266 @@ function applyEndpointWithAnimation() {
 function getAdminBaseUrl() { return document.getElementById("endpointInputA").value.trim(); }
 function getAdminBaseUrl() { return document.getElementById("endpointInputA").value.trim(); }
 
-// --- Dummy Charts Base Admin Home ---
-function initCharts(){drawBarChart();drawLineChart();}
-function drawBarChart(x=0,y=0,z=0){
-  const canvas=document.getElementById('barChart');if(!canvas)return;
-  const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
-  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;ctx.scale(dpr,dpr);
-  const W=canvas.offsetWidth,H=canvas.offsetHeight;
-  const pad={top:20,right:20,bottom:40,left:40};
-  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
-  const yMin=-15,yMax=15,yRange=yMax-yMin;
-  ctx.clearRect(0,0,W,H);
-  const cs=getComputedStyle(document.documentElement);
-  const gridC=cs.getPropertyValue('--chart-grid').trim()||'rgba(255,255,255,0.06)';
-  const textC=cs.getPropertyValue('--text-muted').trim()||'#64748b';
-  ctx.strokeStyle=gridC;ctx.lineWidth=1;ctx.font='11px Space Mono, monospace';ctx.fillStyle=textC;ctx.textAlign='right';
-  for(let v=yMin;v<=yMax;v+=5){const py=pad.top+cH-(v-yMin)/yRange*cH;ctx.beginPath();ctx.moveTo(pad.left,py);ctx.lineTo(W-pad.right,py);ctx.stroke();ctx.fillText(v,pad.left-8,py+4);}
-  const bars=[{label:'Sumbu X',val:x,color:'#ef4444'},{label:'Sumbu Y',val:y,color:'#10b981'},{label:'Sumbu Z',val:z,color:'#3b82f6'}];
-  const bw=cW/bars.length;
-  const zeroY=pad.top+cH-(0-yMin)/yRange*cH;
-  ctx.textAlign='center';
-  bars.forEach((b,i)=>{
-    const bx=pad.left+i*bw+bw*0.2,bWidth=bw*0.6;
-    const valY=pad.top+cH-(b.val-yMin)/yRange*cH;
-    ctx.fillStyle=b.color;ctx.globalAlpha=0.85;
-    ctx.beginPath();
-    const rr=4;
-    if(b.val>=0)roundRect(ctx,bx,valY,bWidth,zeroY-valY,rr);else roundRect(ctx,bx,zeroY,bWidth,valY-zeroY,rr);
-    ctx.fill();ctx.globalAlpha=1;
-    ctx.fillStyle=textC;ctx.fillText(b.label,bx+bWidth/2,H-pad.bottom+20);
-  });
-  const vx=document.getElementById('valX'),vy=document.getElementById('valY'),vz=document.getElementById('valZ');
-  if(vx)vx.textContent=x.toFixed(2);if(vy)vy.textContent=y.toFixed(2);if(vz)vz.textContent=z.toFixed(2);
+// ==========================================
+// 1. LOGIC: HOME ADMIN INTEGRASI SEMUA MODUL
+// ==========================================
+let homeRealtimeChart, homeLatestChart, homeMap, homeMarker;
+let isHomeMonitorActive = false;
+let homePollingInterval = null;
+let homeDataX = [], homeDataY = [], homeDataZ = [];
+window.homeStudentMap = {}; // Penyimpan referensi NIM -> Device ID
+window.homeStagnantCount = 0;
+window.homeLastAccelTime = null;
+
+function initHomeModules() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  // 1. Inisialisasi Realtime Chart (Line)
+  var optionsRt = {
+    series: [{ name: 'Sumbu X', data: [] }, { name: 'Sumbu Y', data: [] }, { name: 'Sumbu Z', data: [] }],
+    chart: { id: 'homeRealtime', height: 220, type: 'line', foreColor: textColor, animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 800 } }, toolbar: { show: false }, background: 'transparent' },
+    colors: ['#ef4444', '#10b981', '#3b82f6'], stroke: { curve: 'smooth', width: 3 },
+    xaxis: { type: 'datetime', range: 20000, labels: { datetimeUTC: false } },
+    yaxis: { max: 15, min: -15, tickAmount: 6 }, legend: { show: false },
+    theme: { mode: isDark ? 'dark' : 'light' }
+  };
+  homeRealtimeChart = new ApexCharts(document.querySelector("#homeChartRealtime"), optionsRt);
+  homeRealtimeChart.render();
+
+  // 2. Inisialisasi Posisi Chart (Bar)
+  var optionsLt = {
+    series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
+    chart: { type: 'bar', height: 220, toolbar: { show: false }, foreColor: textColor, background: 'transparent' },
+    colors: ['#ef4444', '#10b981', '#3b82f6'], plotOptions: { bar: { borderRadius: 4, horizontal: false, distributed: true } },
+    dataLabels: { enabled: true }, xaxis: { categories: ['Sumbu X', 'Sumbu Y', 'Sumbu Z'] }, yaxis: { max: 15, min: -15 },
+    legend: { show: true, position: 'bottom', fontFamily: 'Space Mono, monospace', fontWeight: 700, fontSize: '13px', markers: { width: 12, height: 12, radius: 2 },
+      formatter: function(val, opts) {
+        const sd = opts.w.globals.series[0]; const cv = sd[opts.seriesIndex] !== undefined ? sd[opts.seriesIndex] : 0;
+        return val + ": " + cv.toFixed(2);
+      }
+    },
+    theme: { mode: isDark ? 'dark' : 'light' }
+  };
+  homeLatestChart = new ApexCharts(document.querySelector("#homeChartLatest"), optionsLt);
+  homeLatestChart.render();
+
+  // 3. Inisialisasi MAP Home
+  homeMap = L.map('homeMapAdmin', { zoomControl: false }).setView([-7.2575, 112.7521], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(homeMap);
+  const icon = L.divIcon({ className: '', html: '<div class="user-dot" style="background:#10b981; border:2px solid #fff; box-shadow:0 0 10px rgba(16,185,129,0.8);"></div>', iconSize: [16, 16] });
+  homeMarker = L.marker([-7.2575, 112.7521], { icon }).addTo(homeMap);
+  homeMarker.setOpacity(0); // Sembunyikan titik sebelum live
 }
-function roundRect(ctx,x,y,w,h,r){if(h<0){y+=h;h=-h;}if(w<0){x+=w;w=-w;}r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);}
-function drawLineChart(){
-  const canvas=document.getElementById('lineChart');if(!canvas)return;
-  const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1;
-  canvas.width=canvas.offsetWidth*dpr;canvas.height=canvas.offsetHeight*dpr;ctx.scale(dpr,dpr);
-  const W=canvas.offsetWidth,H=canvas.offsetHeight;
-  const pad={top:20,right:20,bottom:20,left:40};
-  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
-  const yMin=-15,yMax=15,yRange=yMax-yMin;
-  ctx.clearRect(0,0,W,H);
-  const cs=getComputedStyle(document.documentElement);
-  const gridC=cs.getPropertyValue('--chart-grid').trim()||'rgba(255,255,255,0.06)';
-  const textC=cs.getPropertyValue('--text-muted').trim()||'#64748b';
-  ctx.strokeStyle=gridC;ctx.lineWidth=1;ctx.font='11px Space Mono, monospace';ctx.fillStyle=textC;ctx.textAlign='right';
-  for(let v=yMin;v<=yMax;v+=5){const py=pad.top+cH-(v-yMin)/yRange*cH;ctx.beginPath();ctx.moveTo(pad.left,py);ctx.lineTo(W-pad.right,py);ctx.stroke();ctx.fillText(v,pad.left-8,py+4);}
-  if(lineData.length<2)return;
-  const maxPts=60,data=lineData.slice(-maxPts);
-  ctx.strokeStyle='rgba(6,182,212,0.15)';ctx.lineWidth=6;ctx.beginPath();
-  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
-  ctx.stroke();
-  ctx.strokeStyle='#06b6d4';ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();
-  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
-  ctx.stroke();
-  const grad=ctx.createLinearGradient(0,pad.top,0,H-pad.bottom);
-  grad.addColorStop(0,'rgba(6,182,212,0.15)');grad.addColorStop(1,'rgba(6,182,212,0)');
-  ctx.fillStyle=grad;ctx.beginPath();
-  data.forEach((v,i)=>{const px=pad.left+i/(maxPts-1)*cW;const py=pad.top+cH-(v-yMin)/yRange*cH;i===0?ctx.moveTo(px,py):ctx.lineTo(px,py);});
-  ctx.lineTo(pad.left+(data.length-1)/(maxPts-1)*cW,H-pad.bottom);ctx.lineTo(pad.left,H-pad.bottom);ctx.closePath();ctx.fill();
+
+// Menimpa fungsi initCharts lama agar bisa merespons perubahan Tema (Dark/Light)
+function initCharts() {
+  if (homeRealtimeChart) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    homeRealtimeChart.updateOptions({ theme: { mode: isDark ? 'dark' : 'light' } });
+    homeLatestChart.updateOptions({ theme: { mode: isDark ? 'dark' : 'light' } });
+  }
+  if (homeMap) setTimeout(() => homeMap.invalidateSize(), 300);
 }
-function toggleMonitor(){if(monitoring)stopMonitor();else startMonitor();}
-function startMonitor(){
-  monitoring=true;lineData=[];
-  document.getElementById('ctrlDot').className='ctrl-dot online';
-  document.getElementById('ctrlStatusText').textContent='Online';
-  document.getElementById('ctrlBtn').classList.add('stop');
-  document.getElementById('ctrlBtnText').textContent='Hentikan Simulator';
-  const id=document.getElementById('deviceIdInput').value||'DEV-BVLDKLLY';
-  const sel=document.getElementById('selectedClientId');if(sel)sel.textContent=id;
-  addLog('info','Simulator Monitor dimulai untuk '+id);
-  monitorInterval=setInterval(()=>{
-    const x=(Math.random()*20-10),y=(Math.random()*20-10),z=(Math.random()*20-10);
-    const stream=Math.sin(Date.now()/500)*8+Math.random()*4-2;
-    lineData.push(Math.max(-15,Math.min(15,stream)));
-    drawBarChart(x,y,z);drawLineChart();
-    if(Math.random()<0.3)addLog('info','Data random diterima: X='+x.toFixed(1)+' Y='+y.toFixed(1)+' Z='+z.toFixed(1));
-  },800);
+
+// Memicu inisialisasi modul home pada saat halaman selesai dimuat
+window.addEventListener('load', () => { initHomeModules(); });
+
+async function openStudentModal() {
+  const modal = document.getElementById("studentModal");
+  const list = document.getElementById("studentModalList");
+  modal.style.display = "flex";
+  
+  // Mengambil sesi aktif dari Modul QR 
+  const cId = document.getElementById("listCourseId").value.trim();
+  const sId = document.getElementById("listSessionId").value.trim();
+  document.getElementById("studentModalSession").innerText = (cId && sId) ? `${cId} - ${sId}` : `Tidak Ada Sesi Terpilih`;
+
+  if (!cId || !sId) {
+    list.innerHTML = `<li style="text-align:center; color:var(--orange); padding:20px; font-size:13px;">Harap generate QR atau isi identitas sesi di Modul QR Presence terlebih dahulu.</li>`;
+    return;
+  }
+
+  list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;"><i class="fas fa-spinner spin-animation"></i> Memuat data mahasiswa...</li>`;
+
+  try {
+    const res = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=${cId}&session_id=${sId}`);
+    const result = await res.json();
+    if (result.ok) {
+      list.innerHTML = "";
+      if (!result.data || result.data.length === 0) {
+        list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada mahasiswa yang terekam pada sesi ini.</li>`;
+      } else {
+        result.data.forEach(row => {
+          window.homeStudentMap[row.user_id] = row.device_id; // Simpan NIM -> Device ID mapping
+          
+          const li = document.createElement("li");
+          li.className = "session-item";
+          li.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+               <strong style="color:var(--text-primary); font-size:14px;">${row.user_id}</strong>
+               <span style="font-family:'Space Mono', monospace; font-size:11px; color:var(--accent); background:var(--bg-card); padding:4px 8px; border-radius:6px;">${row.device_id}</span>
+            </div>
+          `;
+          li.onclick = () => {
+             document.getElementById("homeMonitorInput").value = row.user_id;
+             updateHomeDeviceBadge();
+             closeStudentModal();
+             if (!isHomeMonitorActive) toggleHomeMonitor();
+          };
+          list.appendChild(li);
+        });
+      }
+    } else {
+      list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Gagal: ${result.error}</li>`;
+    }
+  } catch (e) {
+    list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Koneksi gagal.</li>`;
+  }
 }
-function stopMonitor(){
-  if(!monitoring&&!monitorInterval)return;
-  monitoring=false;clearInterval(monitorInterval);
-  const d=document.getElementById('ctrlDot'),s=document.getElementById('ctrlStatusText'),b=document.getElementById('ctrlBtn'),bt=document.getElementById('ctrlBtnText');
-  if(d)d.className='ctrl-dot offline';if(s)s.textContent='Offline';if(b)b.classList.remove('stop');if(bt)bt.textContent='Mulai Simulator Monitor';
-  addLog('warn','Simulator Monitor dihentikan.');
+
+function closeStudentModal(e) { 
+  if(!e || e.target.id === "studentModal") document.getElementById("studentModal").style.display = "none"; 
 }
-function addLog(type,msg){const c=document.getElementById('logConsole');if(!c)return;const t=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const line=document.createElement('span');line.className='log-line';line.innerHTML='<span class="log-time">['+t+']</span> <span class="log-'+type+'">'+msg+'</span>';c.appendChild(line);c.scrollTop=c.scrollHeight;}
+
+function updateHomeDeviceBadge() {
+  const input = document.getElementById("homeMonitorInput").value.trim();
+  const badge = document.getElementById("homeDeviceBadge");
+  const osEl = document.getElementById("homeDeviceOS");
+  const idEl = document.getElementById("homeDeviceIDText");
+  const iconEl = document.getElementById("homeDeviceIcon");
+
+  if (input === "") { badge.style.display = "none"; return; }
+
+  let deviceId = input;
+  // Cek kamus NIM -> Device ID
+  if (window.homeStudentMap[input]) deviceId = window.homeStudentMap[input];
+
+  badge.style.display = "inline-flex";
+  idEl.innerText = deviceId;
+  
+  // OS & Icon Detector Heuristic sederhana
+  const upId = deviceId.toUpperCase();
+  if (upId.includes("MAC") || upId.includes("BVL")) {
+    osEl.innerText = "macOS"; 
+    iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
+  } else if (upId.includes("AND") || upId.includes("IOS") || upId.includes("MOB")) {
+    osEl.innerText = upId.includes("IOS") ? "iOS" : "Android";
+    iconEl.innerHTML = `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`; // Mobile icon
+  } else if (upId.includes("WIN")) {
+    osEl.innerText = "Windows";
+    iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
+  } else {
+    osEl.innerText = "Device";
+    iconEl.innerHTML = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/>`; // Generic
+  }
+}
+
+function homeLogConsole(msg) {
+  const box = document.getElementById("homeLogConsole");
+  const t = new Date().toLocaleTimeString('id-ID');
+  if (box.innerHTML.includes("[Sistem] Siap.")) box.innerHTML = "";
+  box.innerHTML = `<div><span style="color:var(--text-muted)">[${t}]</span> ${msg}</div>` + box.innerHTML;
+}
+
+function toggleHomeMonitor() {
+  const btn = document.getElementById("homeMonitorBtn");
+  const badge = document.getElementById("homeStatusBadge");
+  const input = document.getElementById("homeMonitorInput").value.trim();
+
+  if (!isHomeMonitorActive) {
+    if (input === "") return alert("Masukkan NIM atau Device ID terlebih dahulu!");
+    
+    let targetId = input;
+    if (window.homeStudentMap[input]) targetId = window.homeStudentMap[input];
+
+    isHomeMonitorActive = true;
+    btn.innerText = "Hentikan Monitor";
+    btn.classList.add("stop");
+    
+    badge.className = "status-badge status-live";
+    badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
+
+    document.getElementById("homeKehadiranClient").innerText = targetId;
+    
+    // Set UI Kehadiran Sederhana
+    const kList = document.getElementById("homeKehadiranList");
+    kList.innerHTML = `
+       <li class="attendee-item" style="padding:10px 14px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+             <strong style="color:var(--text-primary);">${input}</strong>
+             <span style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:700; font-size:11px; padding:4px 10px; border-radius:12px;">Hadir (Sesi Terpilih)</span>
+          </div>
+       </li>
+    `;
+
+    homeLogConsole(`Memulai pemantauan radar untuk: <strong style="color:var(--info)">${targetId}</strong>`);
+    
+    window.homeStagnantCount = 0;
+    window.homeLastAccelTime = null;
+
+    homePollingInterval = setInterval(() => { fetchHomeTelemetry(targetId); }, 3000);
+    fetchHomeTelemetry(targetId);
+
+  } else {
+    isHomeMonitorActive = false;
+    btn.innerText = "Mulai Live Monitor";
+    btn.classList.remove("stop");
+    badge.className = "status-badge status-offline";
+    badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
+    clearInterval(homePollingInterval);
+    homeLogConsole("Pemantauan radar dihentikan secara manual.");
+  }
+}
+
+async function fetchHomeTelemetry(deviceId) {
+  if (!isHomeMonitorActive) return;
+
+  // 1. Tarik Data Sensor Gerak (Accel)
+  try {
+    const resA = await fetch(`${getAdminBaseUrl()}?path=telemetry/accel/latest&device_id=${deviceId}`);
+    const jsonA = await resA.json();
+    if (jsonA.ok) {
+      let now = new Date().getTime();
+      let {x, y, z, t} = jsonA.data;
+      
+      if (window.homeLastAccelTime === t) {
+         window.homeStagnantCount++;
+         if (window.homeStagnantCount >= 3) {
+            document.getElementById("homeStatusBadge").className = "status-badge status-standby";
+            document.getElementById("homeStatusBadge").innerHTML = `<i class="fas fa-circle"></i> Standby`;
+         }
+      } else {
+         window.homeStagnantCount = 0;
+         window.homeLastAccelTime = t;
+         document.getElementById("homeStatusBadge").className = "status-badge status-live";
+         document.getElementById("homeStatusBadge").innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
+
+         homeDataX.push([now, x]); homeDataY.push([now, y]); homeDataZ.push([now, z]);
+         if (homeDataX.length > 20) { homeDataX.shift(); homeDataY.shift(); homeDataZ.shift(); }
+         
+         homeRealtimeChart.updateSeries([{name:'Sumbu X', data:homeDataX},{name:'Sumbu Y', data:homeDataY},{name:'Sumbu Z', data:homeDataZ}]);
+         homeLatestChart.updateOptions({ series: [{ name: 'Nilai Terbaru', data: [x, y, z] }] });
+
+         homeLogConsole(`[Sensor] Arus masuk -> X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)}`);
+      }
+    }
+  } catch(e) {}
+
+  // 2. Tarik Data Lokasi (GPS)
+  try {
+    const resG = await fetch(`${getAdminBaseUrl()}?path=telemetry/gps/latest&device_id=${deviceId}`);
+    const jsonG = await resG.json();
+    if (jsonG.ok) {
+      let {lat, lng} = jsonG.data;
+      homeMarker.setOpacity(1);
+      homeMarker.setLatLng([lat, lng]);
+      homeMap.panTo([lat, lng], { animate: true, duration: 1 });
+      document.getElementById("homeMapCoords").innerText = `${lat.toFixed(5)} , ${lng.toFixed(5)}`;
+      homeLogConsole(`[GPS] Radar mengunci koordinat: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    }
+  } catch(e) {}
+}
 
 // ==========================================
 // 2. LOGIC: QR PRESENCE (DOSEN)
