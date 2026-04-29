@@ -557,7 +557,7 @@
           <p class="setting-desc">Simpan endpoint Google Apps Script baru jika ingin mengganti tujuan database.</p>
           <div style="padding-left: 64px;">
             <div class="input-group">
-              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec">
+              <input type="text" class="input-themed" id="endpointInputC" value="https://script.google.com/macros/s/AKfycbzbTUqzUTkukwH0aMpLB6s8GWcPxOJVAtMo_9XymYS6rmqHAHgMFlTFmaZH_lTQ71jR/exec">
             </div>
             <button class="btn-themed btn-primary" id="applyBtnC" disabled onclick="applyEndpoint('C')" style="width: auto; padding: 12px 24px;">Terapkan Endpoint Baru</button>
           </div>
@@ -656,34 +656,31 @@ function detectDeviceOS() {
   return os + exactModel;
 }
 
-// function getDeviceId() {
-//   let devId = localStorage.getItem("attendsense_device_id");
-//   if (!devId) {
-//     devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-//     localStorage.setItem("attendsense_device_id", devId);
-//   }
-//   return devId;
-// }
-
 function getDeviceId() {
   let devId = localStorage.getItem("attendsense_device_id");
   if (!devId) {
     const ua = navigator.userAgent.toLowerCase();
     let osCode = "OTH"; // Default Other
     
-    // Deteksi super spesifik
-    if (ua.includes('macintosh') || ua.includes('mac os x')) {
-       // iPad OS 13+ secara default meminta tampilan desktop (Mac), jadi kita cek touch points
-       if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } // iPad
-       else { osCode = "MAC"; } // macOS
-    }
-    else if (ua.includes('windows')) osCode = "WIN"; // Windows
-    else if (ua.includes('ipad')) osCode = "IPD"; // iPad versi lama
-    else if (ua.includes('iphone') || ua.includes('ipod')) osCode = "IPH"; // iPhone
+    // URUTAN DETEKSI DIPERBAIKI
+    if (ua.includes('windows')) {
+        osCode = "WIN"; // Windows
+    } 
+    else if (ua.includes('iphone') || ua.includes('ipod')) {
+        osCode = "IPH"; // iPhone dicek LEBIH DULU
+    } 
+    else if (ua.includes('ipad')) {
+        osCode = "IPD"; // iPad versi lama
+    } 
     else if (ua.includes('android')) {
-       // Android membedakan HP dan Tablet dari kata 'mobile' di user-agent
-       if (ua.includes('mobile')) { osCode = "AND"; } // Android Phone
-       else { osCode = "TAB"; } // Android Tablet
+        // Android membedakan HP dan Tablet dari kata 'mobile' di user-agent
+        if (ua.includes('mobile')) { osCode = "AND"; } 
+        else { osCode = "TAB"; } 
+    } 
+    else if (ua.includes('macintosh') || ua.includes('mac os x')) {
+        // Jika lolos dari cek iPhone di atas dan sampai sini, berarti ini antara Mac atau iPad OS 13+
+        if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } // iPad dengan tampilan Desktop
+        else { osCode = "MAC"; } // macOS asli
     }
 
     // Menghasilkan format: DEV-IPH-A1B2C3

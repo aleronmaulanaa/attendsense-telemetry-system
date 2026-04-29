@@ -641,11 +641,7 @@
             </div>
             
             <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; font-weight:600;">Masukkan Device ID untuk difokuskan (opsional):</p>
-            <!-- <div class="input-group">
-              <input type="text" class="input-themed" id="targetDeviceIdAccel" placeholder="Contoh: DEV-BVLDKLLY" />
-              <button id="btnStartAccelAdmin" class="btn-themed btn-primary" style="width:auto;" onclick="startPollingAccel()">Mulai Live Monitor</button>
-              <button id="btnStopAccelAdmin" class="btn-themed btn-danger" style="width:auto; display: none;" onclick="stopPollingAccel()">Hentikan</button>
-            </div> -->
+            
             <div class="input-group">
   <div style="position: relative; flex: 1;">
     <input type="text" class="input-themed" id="targetDeviceIdAccel" placeholder="Contoh: DEV-BVLDKLLY" style="padding-right: 40px; margin-bottom: 0;">
@@ -736,7 +732,7 @@
          <div class="setting-content">
   <div class="input-group">
     <div style="position: relative; flex: 1;">
-      <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec" style="padding-right: 40px; margin-bottom: 0;">
+      <input type="text" class="input-themed" id="endpointInputA" value="https://script.google.com/macros/s/AKfycbzbTUqzUTkukwH0aMpLB6s8GWcPxOJVAtMo_9XymYS6rmqHAHgMFlTFmaZH_lTQ71jR/exec" style="padding-right: 40px; margin-bottom: 0;">
       <button id="resetEndpointBtn" title="Kembalikan ke Default URL" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 16px; transition: color 0.2s;">
         <i class="fas fa-times"></i>
       </button>
@@ -793,17 +789,29 @@
     </div>
 </div>
 
+<!-- Modal Daftar Mahasiswa -->
 <div id="studentModal" class="modal-overlay" onclick="closeStudentModal(event)">
   <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h2 style="margin:0; font-size: 18px;">Daftar Mahasiswa Aktif</h2>
-      <button onclick="closeStudentModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;"><i class="fas fa-times"></i></button>
+    
+    <div class="modal-header" style="margin-bottom: 16px;">
+      <h2 style="margin:0; font-size: 20px; font-weight:800;">Daftar Mahasiswa Aktif</h2>
+      <button onclick="closeStudentModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;"><i class="fas fa-times"></i></button>
     </div>
-    <div style="margin-bottom: 12px; font-size:12px; color:var(--text-muted); padding-bottom:8px; border-bottom:1px solid var(--glass-border);">
-      Sesi Dipilih: <strong id="studentModalSession" style="color:var(--text-primary);"></strong>
+    
+    <div style="margin-bottom: 16px; display:flex; align-items:center; justify-content:space-between; padding-bottom:16px; border-bottom:1px solid var(--glass-border); gap:10px; flex-wrap:wrap;">
+      <div style="font-size:13px; color:var(--text-muted);">
+        Sesi Dipilih: <strong id="studentModalSession" style="color:var(--text-primary); font-weight:800;">Semua Mahasiswa</strong>
+      </div>
+      
+      <!-- Dropdown Pilihan Kelas -->
+      <select id="studentModalFilter" onchange="filterStudentModal(this.value)" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-primary); font-size: 13px; font-weight:600; outline: none; cursor: pointer; max-width:180px; font-family:inherit;">
+         <option value="ALL">Semua Kelas</option>
+      </select>
     </div>
-    <ul id="studentModalList" class="session-history-list" style="max-height:350px; overflow-y:auto; margin:0; padding:0;">
+    
+    <ul id="studentModalList" class="session-history-list" style="max-height:350px; overflow-y:auto; margin:0; padding:0; list-style:none;">
     </ul>
+    
   </div>
 </div>
 
@@ -901,7 +909,7 @@ function switchView(view){
 
 function handleLogout(){ window.location.href = '../index.html'; }
 
-const DEFAULT_ENDPOINT = "https://script.google.com/macros/s/AKfycbzWmAGvcLYC2NcTqOr0ytU2vw4MbWD6KCV5AJn-8lK4Q52hgEHbaDWROzqWV7T4xwNj/exec";
+const DEFAULT_ENDPOINT = "https://script.google.com/macros/s/AKfycbzbTUqzUTkukwH0aMpLB6s8GWcPxOJVAtMo_9XymYS6rmqHAHgMFlTFmaZH_lTQ71jR/exec";
 const endpointInput = document.getElementById('endpointInputA');
 const applyBtn = document.getElementById('applyBtnA');
 const resetEndpointBtn = document.getElementById('resetEndpointBtn');
@@ -1080,57 +1088,93 @@ function updateHomeClearButtonVisibility() {
 
 async function openStudentModal() {
   const modal = document.getElementById("studentModal");
-  const list = document.getElementById("studentModalList");
+  const filter = document.getElementById("studentModalFilter");
   modal.style.display = "flex";
   
-  const cId = document.getElementById("listCourseId").value.trim();
-  const sId = document.getElementById("listSessionId").value.trim();
-  document.getElementById("studentModalSession").innerText = (cId && sId) ? `${cId} - ${sId}` : `Tidak Ada Sesi Terpilih`;
-
-  if (!cId || !sId) {
-    list.innerHTML = `<li style="text-align:center; color:var(--orange); padding:20px; font-size:13px;">Harap generate QR atau isi identitas sesi di Modul QR Presence terlebih dahulu.</li>`;
-    return;
-  }
-
-  list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;"><i class="fas fa-spinner spin-animation"></i> Memuat data mahasiswa...</li>`;
-
   try {
-    const res = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=${cId}&session_id=${sId}`);
-    const result = await res.json();
-    if (result.ok) {
-      list.innerHTML = "";
-      if (!result.data || result.data.length === 0) {
-        list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada mahasiswa yang terekam pada sesi ini.</li>`;
-      } else {
-        result.data.forEach(row => {
-          // Update kamus dua arah
-          window.homeStudentMap[row.user_id] = row.device_id;
-          window.homeDeviceMap[row.device_id] = row.user_id;
-
-          const li = document.createElement("li");
-          li.className = "session-item";
-          li.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-               <strong style="color:var(--text-primary); font-size:14px;">${row.user_id}</strong>
-               <span style="font-family:'Space Mono', monospace; font-size:11px; color:var(--accent); background:var(--bg-card); padding:4px 8px; border-radius:6px;">${row.device_id}</span>
-            </div>
-          `;
-          li.onclick = () => {
-             document.getElementById("homeMonitorInput").value = row.user_id;
-             updateHomeDeviceBadge();
-             updateHomeClearButtonVisibility();
-             closeStudentModal();
-             if (!isHomeMonitorActive) toggleHomeMonitor();
-          };
-          list.appendChild(li);
-        });
-      }
-    } else {
-      list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Gagal: ${result.error}</li>`;
+    // 1. Tarik daftar sesi untuk mengisi dropdown kelas
+    const resSes = await fetch(`${getAdminBaseUrl()}?path=presence/sessions`);
+    const jsonSes = await resSes.json();
+    
+    filter.innerHTML = `<option value="ALL">Semua Kelas</option>`;
+    if (jsonSes.ok && jsonSes.data) {
+       jsonSes.data.forEach(s => {
+          filter.innerHTML += `<option value="${s.course_id}|${s.session_id}">${s.course_id} - ${s.session_id}</option>`;
+       });
     }
+    
+    // 2. Set default pilihan langsung ke "Semua Kelas" / "ALL"
+    filter.value = "ALL";
+    await loadStudentsIntoModal("ALL");
+
   } catch (e) {
-    list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Koneksi gagal.</li>`;
+    document.getElementById("studentModalList").innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Koneksi gagal saat memuat sesi.</li>`;
   }
+}
+
+function filterStudentModal(val) {
+   loadStudentsIntoModal(val);
+}
+
+async function loadStudentsIntoModal(filterValue) {
+   const list = document.getElementById("studentModalList");
+   const sessionLabel = document.getElementById("studentModalSession");
+   list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;"><i class="fas fa-spinner spin-animation"></i> Memuat mahasiswa...</li>`;
+   
+   let fetchUrl = "";
+   if (filterValue === "ALL") {
+      sessionLabel.innerText = "Semua Mahasiswa";
+      fetchUrl = `${getAdminBaseUrl()}?path=presence/list&course_id=ALL&session_id=ALL`; 
+   } else {
+      const [cId, sId] = filterValue.split("|");
+      sessionLabel.innerText = `${cId} - ${sId}`;
+      fetchUrl = `${getAdminBaseUrl()}?path=presence/list&course_id=${cId}&session_id=${sId}`;
+   }
+
+   try {
+      const res = await fetch(fetchUrl);
+      const result = await res.json();
+      
+      if (result.ok) {
+         list.innerHTML = "";
+         if (!result.data || result.data.length === 0) {
+            list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada mahasiswa pada pilihan ini.</li>`;
+         } else {
+            result.data.forEach(row => {
+              // Update kamus pelacak identitas
+              window.homeStudentMap[row.user_id] = row.device_id;
+              window.homeDeviceMap[row.device_id] = row.user_id;
+
+              const li = document.createElement("li");
+              // Styling Card ala Screenshot (Mendukung Dark/Light Mode)
+              li.style.cssText = "background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s ease; box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);";
+              
+              li.innerHTML = `
+                 <strong style="color:var(--text-primary); font-size:16px; font-weight:800;">${row.user_id}</strong>
+                 <span style="font-family:'Space Mono', monospace; font-size:12px; color:var(--accent); font-weight:700; letter-spacing:0.5px;">${row.device_id}</span>
+              `;
+              
+              // Animasi Hover Interaktif
+              li.onmouseover = () => { li.style.borderColor = "var(--accent)"; li.style.transform = "translateY(-2px)"; li.style.boxShadow = "0 4px 15px var(--accent-soft)"; };
+              li.onmouseout = () => { li.style.borderColor = "var(--glass-border)"; li.style.transform = "translateY(0)"; li.style.boxShadow = "inset 0 2px 10px rgba(0,0,0,0.02)"; };
+              
+              // Event Klik untuk langsung memantau mahasiswa
+              li.onclick = () => {
+                 document.getElementById("homeMonitorInput").value = row.user_id;
+                 updateHomeDeviceBadge();
+                 updateHomeClearButtonVisibility();
+                 closeStudentModal();
+                 if (!isHomeMonitorActive) toggleHomeMonitor();
+              };
+              list.appendChild(li);
+            });
+         }
+      } else {
+         list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Gagal: ${result.error}</li>`;
+      }
+   } catch(e) {
+      list.innerHTML = `<li style="text-align:center; color:var(--danger); padding:20px;">Koneksi gagal.</li>`;
+   }
 }
 
 function closeStudentModal(e) { 
@@ -1774,9 +1818,6 @@ async function fetchServerDataAccel() {
              banner.style.color = "var(--orange)";
              banner.querySelector("span").innerText = "Klien sedang tidak mengirim data. Sistem dalam mode Standby...";
              
-            //  const badge = document.getElementById("statusBadgeAccel");
-            //  badge.classList.remove("active");
-            //  badge.innerHTML = `<i class="fas fa-circle" style="color:var(--orange)"></i> Standby`;
             const badge = document.getElementById("statusBadgeAccel");
              // Menghubungkan ke class Kuning yang baru kita buat di CSS
              badge.className = "status-badge status-standby"; 
@@ -1809,9 +1850,6 @@ async function fetchServerDataAccel() {
       stagnantCountAccel = 0;
       lastAccelTimeAdmin = dataTime;
 
-      // const badge = document.getElementById("statusBadgeAccel");
-      // badge.classList.add("active");
-      // badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
       const badge = document.getElementById("statusBadgeAccel");
       badge.className = "status-badge status-live"; // Titik Hijau Berkedip
       badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
@@ -1867,9 +1905,6 @@ function stopPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
   
-  // const badge = document.getElementById("statusBadgeAccel");
-  // badge.classList.remove("active");
-  // badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
   const badge = document.getElementById("statusBadgeAccel");
   badge.className = "status-badge status-offline"; // Titik Merah Diam
   badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
