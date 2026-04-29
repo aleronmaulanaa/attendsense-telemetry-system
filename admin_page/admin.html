@@ -1156,18 +1156,35 @@ function updateHomeDeviceBadge() {
   idEl.innerText = deviceId;
   
   const upId = deviceId.toUpperCase();
-  if (upId.includes("MAC") || upId.includes("BVL")) {
+  
+  // Koleksi Icon SVG Custom
+  const iconDesktop = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
+  const iconPhone = `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`;
+  const iconTablet = `<rect x="3" y="2" width="18" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`; // Sedikit lebih lebar dari iconPhone
+  const iconGeneric = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/>`;
+
+  // Deteksi Lengkap Berdasarkan Kode Tengah
+  if (upId.includes("-MAC-") || upId.includes("BVL")) { // Saya biarkan BVL untuk perangkat lama Anda
     osEl.innerText = "macOS"; 
-    iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
-  } else if (upId.includes("AND") || upId.includes("IOS") || upId.includes("MOB")) {
-    osEl.innerText = upId.includes("IOS") ? "iOS" : "Android";
-    iconEl.innerHTML = `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`; 
-  } else if (upId.includes("WIN")) {
-    osEl.innerText = "Windows";
-    iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
+    iconEl.innerHTML = iconDesktop;
+  } else if (upId.includes("-WIN-")) {
+    osEl.innerText = "Windows"; 
+    iconEl.innerHTML = iconDesktop;
+  } else if (upId.includes("-IPH-")) {
+    osEl.innerText = "iPhone"; 
+    iconEl.innerHTML = iconPhone;
+  } else if (upId.includes("-IPD-")) {
+    osEl.innerText = "iPad"; 
+    iconEl.innerHTML = iconTablet;
+  } else if (upId.includes("-AND-")) {
+    osEl.innerText = "Android"; 
+    iconEl.innerHTML = iconPhone;
+  } else if (upId.includes("-TAB-")) {
+    osEl.innerText = "Tablet Android"; 
+    iconEl.innerHTML = iconTablet;
   } else {
     osEl.innerText = "Device";
-    iconEl.innerHTML = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/>`; 
+    iconEl.innerHTML = iconGeneric;
   }
 }
 

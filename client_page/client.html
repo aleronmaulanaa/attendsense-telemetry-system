@@ -656,10 +656,38 @@ function detectDeviceOS() {
   return os + exactModel;
 }
 
+// function getDeviceId() {
+//   let devId = localStorage.getItem("attendsense_device_id");
+//   if (!devId) {
+//     devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+//     localStorage.setItem("attendsense_device_id", devId);
+//   }
+//   return devId;
+// }
+
 function getDeviceId() {
   let devId = localStorage.getItem("attendsense_device_id");
   if (!devId) {
-    devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+    const ua = navigator.userAgent.toLowerCase();
+    let osCode = "OTH"; // Default Other
+    
+    // Deteksi super spesifik
+    if (ua.includes('macintosh') || ua.includes('mac os x')) {
+       // iPad OS 13+ secara default meminta tampilan desktop (Mac), jadi kita cek touch points
+       if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } // iPad
+       else { osCode = "MAC"; } // macOS
+    }
+    else if (ua.includes('windows')) osCode = "WIN"; // Windows
+    else if (ua.includes('ipad')) osCode = "IPD"; // iPad versi lama
+    else if (ua.includes('iphone') || ua.includes('ipod')) osCode = "IPH"; // iPhone
+    else if (ua.includes('android')) {
+       // Android membedakan HP dan Tablet dari kata 'mobile' di user-agent
+       if (ua.includes('mobile')) { osCode = "AND"; } // Android Phone
+       else { osCode = "TAB"; } // Android Tablet
+    }
+
+    // Menghasilkan format: DEV-IPH-A1B2C3
+    devId = "DEV-" + osCode + "-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     localStorage.setItem("attendsense_device_id", devId);
   }
   return devId;
