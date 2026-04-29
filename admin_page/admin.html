@@ -519,8 +519,14 @@
                     <span class="device-id" id="homeDeviceIDText">DEV-XXXXX</span>
                  </div>
              </div>
-             <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <input class="ctrl-input" type="text" id="homeMonitorInput" placeholder="Masukkan NIM atau Device ID..." style="flex:1; min-width:200px;" oninput="updateHomeDeviceBadge()">
+             <!-- Input Box & Mulai Button -->
+             <div style="display:flex; gap:12px; flex-wrap:wrap; flex:1;">
+                <div style="position: relative; flex: 1; min-width:200px;">
+                  <input class="ctrl-input" type="text" id="homeMonitorInput" placeholder="Masukkan NIM (Kosongkan untuk Auto-Catch data terbaru)..." style="width: 100%; padding-right: 40px;" oninput="updateHomeClearButtonVisibility(); updateHomeDeviceBadge();">
+                  <button id="homeClearInputBtn" title="Bersihkan" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; font-size: 16px; transition: color 0.2s;">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
                 <button class="ctrl-btn btn-primary" id="homeMonitorBtn" onclick="toggleHomeMonitor()" style="width:auto;">Mulai Live Monitor</button>
              </div>
           </div>
@@ -1013,15 +1019,30 @@ let homeRealtimeChart, homeLatestChart, homeMap, homeMarker;
 let isHomeMonitorActive = false;
 let homePollingInterval = null;
 let homeDataX = [], homeDataY = [], homeDataZ = [];
-window.homeStudentMap = {}; // Penyimpan referensi NIM -> Device ID
+window.homeStudentMap = {}; 
+
+// State Tracking
 window.homeStagnantCount = 0;
 window.homeLastAccelTime = null;
+window.homeLastGpsTime = null;
+window.homeSensorOnline = true; 
+window.homeGpsOnline = true;
+window.homeGpsStandbyLogged = false;
+
+// Format Waktu [dd/mm/yyyy : hh.mm.ss]
+function getHomeFormattedTime(dateObj = new Date()) {
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const y = dateObj.getFullYear();
+  // Memaksa format menggunakan titik untuk pemisah jam, menit, detik
+  const t = dateObj.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit', second:'2-digit'}).replace(/:/g, '.');
+  return `[${d}/${m}/${y} : ${t}]`;
+}
 
 function initHomeModules() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const textColor = isDark ? '#94a3b8' : '#64748b';
 
-  // 1. Inisialisasi Realtime Chart (Line)
   var optionsRt = {
     series: [{ name: 'Sumbu X', data: [] }, { name: 'Sumbu Y', data: [] }, { name: 'Sumbu Z', data: [] }],
     chart: { id: 'homeRealtime', height: 220, type: 'line', foreColor: textColor, animations: { enabled: true, easing: 'linear', dynamicAnimation: { speed: 800 } }, toolbar: { show: false }, background: 'transparent' },
@@ -1033,7 +1054,6 @@ function initHomeModules() {
   homeRealtimeChart = new ApexCharts(document.querySelector("#homeChartRealtime"), optionsRt);
   homeRealtimeChart.render();
 
-  // 2. Inisialisasi Posisi Chart (Bar)
   var optionsLt = {
     series: [{ name: 'Nilai Terbaru', data: [0, 0, 0] }],
     chart: { type: 'bar', height: 220, toolbar: { show: false }, foreColor: textColor, background: 'transparent' },
@@ -1050,15 +1070,22 @@ function initHomeModules() {
   homeLatestChart = new ApexCharts(document.querySelector("#homeChartLatest"), optionsLt);
   homeLatestChart.render();
 
-  // 3. Inisialisasi MAP Home
   homeMap = L.map('homeMapAdmin', { zoomControl: false }).setView([-7.2575, 112.7521], 13);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap' }).addTo(homeMap);
   const icon = L.divIcon({ className: '', html: '<div class="user-dot" style="background:#10b981; border:2px solid #fff; box-shadow:0 0 10px rgba(16,185,129,0.8);"></div>', iconSize: [16, 16] });
   homeMarker = L.marker([-7.2575, 112.7521], { icon }).addTo(homeMap);
-  homeMarker.setOpacity(0); // Sembunyikan titik sebelum live
+  homeMarker.setOpacity(0);
+  
+  // Event logic clear button
+  document.getElementById("homeClearInputBtn").onclick = function() {
+    const input = document.getElementById("homeMonitorInput");
+    input.value = ""; 
+    updateHomeClearButtonVisibility(); 
+    updateHomeDeviceBadge();
+    input.focus(); 
+  };
 }
 
-// Menimpa fungsi initCharts lama agar bisa merespons perubahan Tema (Dark/Light)
 function initCharts() {
   if (homeRealtimeChart) {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -1068,15 +1095,23 @@ function initCharts() {
   if (homeMap) setTimeout(() => homeMap.invalidateSize(), 300);
 }
 
-// Memicu inisialisasi modul home pada saat halaman selesai dimuat
 window.addEventListener('load', () => { initHomeModules(); });
+
+function updateHomeClearButtonVisibility() {
+  const input = document.getElementById("homeMonitorInput");
+  const clearBtn = document.getElementById("homeClearInputBtn");
+  if (input.value.trim() !== "" && !isHomeMonitorActive) {
+    clearBtn.style.display = "block";
+  } else {
+    clearBtn.style.display = "none";
+  }
+}
 
 async function openStudentModal() {
   const modal = document.getElementById("studentModal");
   const list = document.getElementById("studentModalList");
   modal.style.display = "flex";
   
-  // Mengambil sesi aktif dari Modul QR 
   const cId = document.getElementById("listCourseId").value.trim();
   const sId = document.getElementById("listSessionId").value.trim();
   document.getElementById("studentModalSession").innerText = (cId && sId) ? `${cId} - ${sId}` : `Tidak Ada Sesi Terpilih`;
@@ -1097,8 +1132,7 @@ async function openStudentModal() {
         list.innerHTML = `<li style="text-align:center; color:var(--text-muted); padding:20px;">Belum ada mahasiswa yang terekam pada sesi ini.</li>`;
       } else {
         result.data.forEach(row => {
-          window.homeStudentMap[row.user_id] = row.device_id; // Simpan NIM -> Device ID mapping
-          
+          window.homeStudentMap[row.user_id] = row.device_id;
           const li = document.createElement("li");
           li.className = "session-item";
           li.innerHTML = `
@@ -1110,6 +1144,7 @@ async function openStudentModal() {
           li.onclick = () => {
              document.getElementById("homeMonitorInput").value = row.user_id;
              updateHomeDeviceBadge();
+             updateHomeClearButtonVisibility();
              closeStudentModal();
              if (!isHomeMonitorActive) toggleHomeMonitor();
           };
@@ -1138,48 +1173,91 @@ function updateHomeDeviceBadge() {
   if (input === "") { badge.style.display = "none"; return; }
 
   let deviceId = input;
-  // Cek kamus NIM -> Device ID
   if (window.homeStudentMap[input]) deviceId = window.homeStudentMap[input];
 
   badge.style.display = "inline-flex";
   idEl.innerText = deviceId;
   
-  // OS & Icon Detector Heuristic sederhana
   const upId = deviceId.toUpperCase();
   if (upId.includes("MAC") || upId.includes("BVL")) {
     osEl.innerText = "macOS"; 
     iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
   } else if (upId.includes("AND") || upId.includes("IOS") || upId.includes("MOB")) {
     osEl.innerText = upId.includes("IOS") ? "iOS" : "Android";
-    iconEl.innerHTML = `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`; // Mobile icon
+    iconEl.innerHTML = `<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/>`; 
   } else if (upId.includes("WIN")) {
     osEl.innerText = "Windows";
     iconEl.innerHTML = `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>`;
   } else {
     osEl.innerText = "Device";
-    iconEl.innerHTML = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/>`; // Generic
+    iconEl.innerHTML = `<rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/>`; 
   }
 }
 
+// Log Writer Dinamis dengan Waktu Real-Time
 function homeLogConsole(msg) {
   const box = document.getElementById("homeLogConsole");
-  const t = new Date().toLocaleTimeString('id-ID');
+  const t = getHomeFormattedTime();
   if (box.innerHTML.includes("[Sistem] Siap.")) box.innerHTML = "";
-  box.innerHTML = `<div><span style="color:var(--text-muted)">[${t}]</span> ${msg}</div>` + box.innerHTML;
+  box.innerHTML = `<div><span style="color:var(--text-muted)">${t}</span> ${msg}</div>` + box.innerHTML;
 }
 
-function toggleHomeMonitor() {
+// Auto-Catch: Mengambil mahasiswa terabsen dari kelas terakhir
+async function fetchLatestStudentData() {
+  try {
+    const resSes = await fetch(`${getAdminBaseUrl()}?path=presence/sessions`);
+    const jsonSes = await resSes.json();
+    if (!jsonSes.ok || !jsonSes.data || jsonSes.data.length === 0) return null;
+    
+    // Asumsi index 0 adalah yang paling baru (loop terbalik API Anda)
+    const latestSes = jsonSes.data[0]; 
+    const resList = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=${latestSes.course_id}&session_id=${latestSes.session_id}`);
+    const jsonList = await resList.json();
+    
+    if (!jsonList.ok || !jsonList.data || jsonList.data.length === 0) return null;
+    return jsonList.data[jsonList.data.length - 1]; // Mengambil absensi paling bontot (terbaru)
+  } catch (error) {
+    return null;
+  }
+}
+
+async function toggleHomeMonitor() {
   const btn = document.getElementById("homeMonitorBtn");
   const badge = document.getElementById("homeStatusBadge");
-  const input = document.getElementById("homeMonitorInput").value.trim();
+  const inputEl = document.getElementById("homeMonitorInput");
+  let inputVal = inputEl.value.trim();
 
   if (!isHomeMonitorActive) {
-    if (input === "") return alert("Masukkan NIM atau Device ID terlebih dahulu!");
-    
-    let targetId = input;
-    if (window.homeStudentMap[input]) targetId = window.homeStudentMap[input];
+    let targetId = "";
+    let targetNim = "";
+    let isAutoCatch = false;
 
+    // SKENARIO AUTO-CATCH
+    if (inputVal === "") {
+      isAutoCatch = true;
+      homeLogConsole(`<span style="color:var(--info)">[Sistem] Mencari mahasiswa dengan presensi terbaru...</span>`);
+      
+      const latestData = await fetchLatestStudentData();
+      if (!latestData) {
+        homeLogConsole(`<span style="color:var(--danger)">[Sistem] Gagal menemukan data mahasiswa aktif. Pastikan ada riwayat absensi.</span>`);
+        return;
+      }
+      
+      targetNim = latestData.user_id;
+      targetId = latestData.device_id;
+      window.homeStudentMap[targetNim] = targetId; 
+      
+      inputEl.value = targetNim;
+      updateHomeDeviceBadge();
+    } else {
+      targetNim = inputVal;
+      targetId = window.homeStudentMap[inputVal] ? window.homeStudentMap[inputVal] : inputVal;
+    }
+
+    // AKTIFKAN MONITOR
     isHomeMonitorActive = true;
+    updateHomeClearButtonVisibility(); // Sembunyikan tombol clear
+    
     btn.innerText = "Hentikan Monitor";
     btn.classList.add("stop");
     
@@ -1188,21 +1266,31 @@ function toggleHomeMonitor() {
 
     document.getElementById("homeKehadiranClient").innerText = targetId;
     
-    // Set UI Kehadiran Sederhana
+    // UI Kehadiran Sederhana
     const kList = document.getElementById("homeKehadiranList");
     kList.innerHTML = `
        <li class="attendee-item" style="padding:10px 14px; margin-bottom:8px;">
           <div style="display:flex; justify-content:space-between; width:100%;">
-             <strong style="color:var(--text-primary);">${input}</strong>
-             <span style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:700; font-size:11px; padding:4px 10px; border-radius:12px;">Hadir (Sesi Terpilih)</span>
+             <strong style="color:var(--text-primary);">${targetNim}</strong>
+             <span style="background:rgba(16,185,129,0.1); color:#10b981; font-weight:700; font-size:11px; padding:4px 10px; border-radius:12px;">Hadir (Pemantauan Aktif)</span>
           </div>
        </li>
     `;
 
-    homeLogConsole(`Memulai pemantauan radar untuk: <strong style="color:var(--info)">${targetId}</strong>`);
-    
+    // Log Awal
+    if (isAutoCatch) {
+       homeLogConsole(`<span style="color:var(--info)">[Sistem] Radar mengunci pada perangkat aktif: ${targetId}</span>`);
+    } else {
+       homeLogConsole(`<span style="color:var(--info)">[Sistem] Memulai pemantauan radar untuk: ${targetId}</span>`);
+    }
+
+    // Reset Tracker
     window.homeStagnantCount = 0;
     window.homeLastAccelTime = null;
+    window.homeLastGpsTime = null;
+    window.homeSensorOnline = true; 
+    window.homeGpsOnline = true;
+    window.homeGpsStandbyLogged = false;
 
     homePollingInterval = setInterval(() => { fetchHomeTelemetry(targetId); }, 3000);
     fetchHomeTelemetry(targetId);
@@ -1214,7 +1302,8 @@ function toggleHomeMonitor() {
     badge.className = "status-badge status-offline";
     badge.innerHTML = `<i class="fas fa-circle"></i> Offline`;
     clearInterval(homePollingInterval);
-    homeLogConsole("Pemantauan radar dihentikan secara manual.");
+    updateHomeClearButtonVisibility(); // Tampilkan tombol clear jika input terisi
+    homeLogConsole(`<span style="color:var(--danger)">[Sistem] Pemantauan radar dihentikan secara manual.</span>`);
   }
 }
 
@@ -1231,13 +1320,20 @@ async function fetchHomeTelemetry(deviceId) {
       
       if (window.homeLastAccelTime === t) {
          window.homeStagnantCount++;
-         if (window.homeStagnantCount >= 3) {
+         if (window.homeStagnantCount === 3) {
             document.getElementById("homeStatusBadge").className = "status-badge status-standby";
             document.getElementById("homeStatusBadge").innerHTML = `<i class="fas fa-circle"></i> Standby`;
+            homeLogConsole(`<span style="color:var(--orange)">[Standby] Menunggu pergerakan klien selanjutnya....</span>`);
+            window.homeSensorOnline = false;
          }
       } else {
+         if (!window.homeSensorOnline && window.homeStagnantCount >= 3) {
+            homeLogConsole(`<span style="color:var(--info)">[Sensor] Kembali online, menerima arus data baru...</span>`);
+         }
          window.homeStagnantCount = 0;
          window.homeLastAccelTime = t;
+         window.homeSensorOnline = true;
+         
          document.getElementById("homeStatusBadge").className = "status-badge status-live";
          document.getElementById("homeStatusBadge").innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
 
@@ -1247,7 +1343,15 @@ async function fetchHomeTelemetry(deviceId) {
          homeRealtimeChart.updateSeries([{name:'Sumbu X', data:homeDataX},{name:'Sumbu Y', data:homeDataY},{name:'Sumbu Z', data:homeDataZ}]);
          homeLatestChart.updateOptions({ series: [{ name: 'Nilai Terbaru', data: [x, y, z] }] });
 
-         homeLogConsole(`[Sensor] Arus masuk -> X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)}`);
+         let serverTime = getHomeFormattedTime(new Date(t));
+         homeLogConsole(`<span style="color:var(--text-muted)">[Sensor] X:${x.toFixed(2)} Y:${y.toFixed(2)} Z:${z.toFixed(2)} -> ${serverTime}</span>`);
+      }
+    } else {
+      if (window.homeSensorOnline) {
+         homeLogConsole(`<span style="color:var(--danger)">[Sensor] Data sensor tidak ditemukan untuk perangkat ini.</span>`);
+         window.homeSensorOnline = false;
+         document.getElementById("homeStatusBadge").className = "status-badge status-standby";
+         document.getElementById("homeStatusBadge").innerHTML = `<i class="fas fa-circle"></i> Standby`;
       }
     }
   } catch(e) {}
@@ -1257,12 +1361,34 @@ async function fetchHomeTelemetry(deviceId) {
     const resG = await fetch(`${getAdminBaseUrl()}?path=telemetry/gps/latest&device_id=${deviceId}`);
     const jsonG = await resG.json();
     if (jsonG.ok) {
-      let {lat, lng} = jsonG.data;
-      homeMarker.setOpacity(1);
-      homeMarker.setLatLng([lat, lng]);
-      homeMap.panTo([lat, lng], { animate: true, duration: 1 });
-      document.getElementById("homeMapCoords").innerText = `${lat.toFixed(5)} , ${lng.toFixed(5)}`;
-      homeLogConsole(`[GPS] Radar mengunci koordinat: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+      let {lat, lng, ts} = jsonG.data;
+      
+      if (window.homeLastGpsTime === ts) {
+         if (!window.homeGpsStandbyLogged) {
+            homeLogConsole(`<span style="color:var(--orange)">[GPS] Radar menangkap koordinat terakhir klien....</span>`);
+            window.homeGpsStandbyLogged = true;
+            window.homeGpsOnline = false;
+         }
+      } else {
+         if (!window.homeGpsOnline && window.homeLastGpsTime !== null) {
+            homeLogConsole(`<span style="color:var(--info)">[GPS] Kembali online, melacak pergerakan baru...</span>`);
+         }
+         window.homeLastGpsTime = ts;
+         window.homeGpsOnline = true;
+         window.homeGpsStandbyLogged = false;
+
+         homeMarker.setOpacity(1);
+         homeMarker.setLatLng([lat, lng]);
+         homeMap.panTo([lat, lng], { animate: true, duration: 1 });
+         document.getElementById("homeMapCoords").innerText = `${lat.toFixed(5)} , ${lng.toFixed(5)}`;
+         
+         homeLogConsole(`<span style="color:var(--text-muted)">[GPS] Radar menangkap koordinat, LAT:${lat.toFixed(5)}, dan LNG:${lng.toFixed(5)}</span>`);
+      }
+    } else {
+      if (window.homeGpsOnline) {
+         homeLogConsole(`<span style="color:var(--danger)">[GPS] Data lokasi tidak ditemukan untuk perangkat ini.</span>`);
+         window.homeGpsOnline = false;
+      }
     }
   } catch(e) {}
 }
