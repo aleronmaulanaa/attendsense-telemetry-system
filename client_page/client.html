@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>AttendSense - Client Dashboard</title>
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -658,10 +663,41 @@ function detectDeviceOS() {
 
 function getDeviceId() {
   let devId = localStorage.getItem("attendsense_device_id");
+  let needsNewId = false;
+
+  // 1. Lakukan deteksi OS yang sebenarnya terlebih dahulu
+  const ua = navigator.userAgent.toLowerCase();
+  let currentOsCode = "OTH"; 
+  
+  if (ua.includes('windows')) { currentOsCode = "WIN"; } 
+  else if (ua.includes('iphone') || ua.includes('ipod')) { currentOsCode = "IPH"; } 
+  else if (ua.includes('ipad')) { currentOsCode = "IPD"; } 
+  else if (ua.includes('android')) {
+      if (ua.includes('mobile')) { currentOsCode = "AND"; } 
+      else { currentOsCode = "TAB"; } 
+  } 
+  else if (ua.includes('macintosh') || ua.includes('mac os x')) {
+      if (navigator.maxTouchPoints > 1) { currentOsCode = "IPD"; } 
+      else { currentOsCode = "MAC"; }
+  }
+
+  // 2. Evaluasi memori: Apakah kosong, formatnya lama, atau KODE OS-NYA SALAH?
   if (!devId) {
-    devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+      needsNewId = true;
+  } else {
+      let parts = devId.split('-');
+      // Jika format lama (< 3) ATAU kode OS di memori (parts[1]) tidak sama dengan OS asli (currentOsCode)
+      if (parts.length < 3 || parts[1] !== currentOsCode) {
+          needsNewId = true;
+      }
+  }
+
+  // 3. Jika butuh ID baru atau perbaikan, timpa dengan yang benar
+  if (needsNewId) {
+    devId = "DEV-" + currentOsCode + "-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     localStorage.setItem("attendsense_device_id", devId);
   }
+  
   return devId;
 }
 
