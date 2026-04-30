@@ -659,32 +659,7 @@ function detectDeviceOS() {
 function getDeviceId() {
   let devId = localStorage.getItem("attendsense_device_id");
   if (!devId) {
-    const ua = navigator.userAgent.toLowerCase();
-    let osCode = "OTH"; // Default Other
-    
-    // URUTAN DETEKSI DIPERBAIKI
-    if (ua.includes('windows')) {
-        osCode = "WIN"; // Windows
-    } 
-    else if (ua.includes('iphone') || ua.includes('ipod')) {
-        osCode = "IPH"; // iPhone dicek LEBIH DULU
-    } 
-    else if (ua.includes('ipad')) {
-        osCode = "IPD"; // iPad versi lama
-    } 
-    else if (ua.includes('android')) {
-        // Android membedakan HP dan Tablet dari kata 'mobile' di user-agent
-        if (ua.includes('mobile')) { osCode = "AND"; } 
-        else { osCode = "TAB"; } 
-    } 
-    else if (ua.includes('macintosh') || ua.includes('mac os x')) {
-        // Jika lolos dari cek iPhone di atas dan sampai sini, berarti ini antara Mac atau iPad OS 13+
-        if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } // iPad dengan tampilan Desktop
-        else { osCode = "MAC"; } // macOS asli
-    }
-
-    // Menghasilkan format: DEV-IPH-A1B2C3
-    devId = "DEV-" + osCode + "-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    devId = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
     localStorage.setItem("attendsense_device_id", devId);
   }
   return devId;
