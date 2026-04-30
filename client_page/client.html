@@ -658,35 +658,37 @@ function detectDeviceOS() {
 
 function getDeviceId() {
   let devId = localStorage.getItem("attendsense_device_id");
+  let needsNewId = false;
+
+  // Cek apakah memori kosong ATAU apakah masih menggunakan format lama
   if (!devId) {
+      needsNewId = true;
+  } else if (devId.split('-').length < 3) {
+      needsNewId = true; // Jika format lama, paksa buat baru
+  }
+
+  // Jika butuh ID baru, jalankan deteksi OS
+  if (needsNewId) {
     const ua = navigator.userAgent.toLowerCase();
-    let osCode = "OTH"; // Default Other
+    let osCode = "OTH"; 
     
-    // URUTAN DETEKSI DIPERBAIKI
-    if (ua.includes('windows')) {
-        osCode = "WIN"; // Windows
-    } 
-    else if (ua.includes('iphone') || ua.includes('ipod')) {
-        osCode = "IPH"; // iPhone dicek LEBIH DULU
-    } 
-    else if (ua.includes('ipad')) {
-        osCode = "IPD"; // iPad versi lama
-    } 
+    if (ua.includes('windows')) { osCode = "WIN"; } 
+    else if (ua.includes('iphone') || ua.includes('ipod')) { osCode = "IPH"; } 
+    else if (ua.includes('ipad')) { osCode = "IPD"; } 
     else if (ua.includes('android')) {
-        // Android membedakan HP dan Tablet dari kata 'mobile' di user-agent
         if (ua.includes('mobile')) { osCode = "AND"; } 
         else { osCode = "TAB"; } 
     } 
     else if (ua.includes('macintosh') || ua.includes('mac os x')) {
-        // Jika lolos dari cek iPhone di atas dan sampai sini, berarti ini antara Mac atau iPad OS 13+
-        if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } // iPad dengan tampilan Desktop
-        else { osCode = "MAC"; } // macOS asli
+        if (navigator.maxTouchPoints > 1) { osCode = "IPD"; } 
+        else { osCode = "MAC"; }
     }
 
-    // Menghasilkan format: DEV-IPH-A1B2C3
+    // Menghasilkan format baru: DEV-OS-RANDOM (Contoh: DEV-IPH-A1B2C3)
     devId = "DEV-" + osCode + "-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    localStorage.setItem("attendsense_device_id", devId);
+    localStorage.setItem("attendsense_device_id", devId); // Timpa ID lama di memori browser
   }
+  
   return devId;
 }
 
