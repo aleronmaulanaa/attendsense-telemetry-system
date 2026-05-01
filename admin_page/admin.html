@@ -1273,6 +1273,7 @@ async function toggleHomeMonitor() {
   if (!isHomeMonitorActive) {
     // 1. UBAH UI SECARA INSTAN
     isHomeMonitorActive = true;
+    inputEl.disabled = true; // <--- TAMBAHAN: Mengunci input
     updateHomeClearButtonVisibility(); 
     
     btn.innerText = "Hentikan Monitor";
@@ -1354,6 +1355,7 @@ async function toggleHomeMonitor() {
   } else {
     // KONDISI SAAT HENTIKAN MONITOR DITEKAN
     isHomeMonitorActive = false;
+    inputEl.disabled = false; // <--- TAMBAHAN: Membuka kunci input
     btn.innerText = "Mulai Live Monitor";
     btn.classList.remove("stop");
     badge.className = "status-badge status-offline";
@@ -1885,6 +1887,10 @@ function startPollingAccel() {
   document.getElementById("btnStartAccelAdmin").style.display = "none";
   document.getElementById("btnStopAccelAdmin").style.display = "flex";
   
+  // TAMBAHAN: Mengunci input accelerometer
+  const targetInput = document.getElementById("targetDeviceIdAccel");
+  if (targetInput) targetInput.disabled = true;
+  
   const badge = document.getElementById("statusBadgeAccel");
   badge.classList.add("active");
   badge.innerHTML = `<i class="fas fa-circle"></i> Live Stream`;
@@ -1904,6 +1910,10 @@ function stopPollingAccel() {
   isPollingAccelActive = false; // <--- MATIKAN BENDERA (Ini akan memblokir data nyasar)
   document.getElementById("btnStartAccelAdmin").style.display = "flex";
   document.getElementById("btnStopAccelAdmin").style.display = "none";
+  
+  // TAMBAHAN: Membuka kunci input accelerometer
+  const targetInput = document.getElementById("targetDeviceIdAccel");
+  if (targetInput) targetInput.disabled = false;
   
   const badge = document.getElementById("statusBadgeAccel");
   badge.className = "status-badge status-offline"; // Titik Merah Diam
