@@ -1240,25 +1240,36 @@ function homeLogConsole(msg) {
 }
 
 // Fungsi Tarik & Mapping Otomatis (Mendukung Input Manual)
+// Fungsi Tarik & Mapping Otomatis (Mendukung Input Manual & Pembaruan NIM)
 async function syncLatestMapping() {
   try {
-    const resSes = await fetch(`${getAdminBaseUrl()}?path=presence/sessions`);
-    const jsonSes = await resSes.json();
-    if (!jsonSes.ok || !jsonSes.data || jsonSes.data.length === 0) return null;
-    
-    const latestSes = jsonSes.data[0]; 
-    const resList = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=${latestSes.course_id}&session_id=${latestSes.session_id}`);
+    // PERBAIKAN: Langsung tarik parameter "ALL" untuk mendapatkan pemetaan SELURUH perangkat
+    // Hal ini akan memanggil semua data dari semua sesi kelas.
+    const resList = await fetch(`${getAdminBaseUrl()}?path=presence/list&course_id=ALL&session_id=ALL`);
     const jsonList = await resList.json();
     
     if (!jsonList.ok || !jsonList.data || jsonList.data.length === 0) return null;
 
-    // Memperbarui kamus 2 arah (NIM <-> Device ID) secara massal
+    // Kosongkan kamus agar selalu fresh setiap kali tombol monitor ditekan
+    window.homeStudentMap = {};
+    window.homeDeviceMap = {};
+
+    // PENTING: Data dari server Apps Script Anda sudah diurutkan dari TERBARU (index 0) ke TERLAMA.
+    // Kita lakukan iterasi, dan HANYA simpan data jika Device ID atau NIM tersebut belum masuk ke kamus.
+    // Ini MENJAMIN bahwa yang tersimpan di memori adalah relasi yang paling BARU.
     jsonList.data.forEach(row => {
-      window.homeStudentMap[row.user_id] = row.device_id;
-      window.homeDeviceMap[row.device_id] = row.user_id;
+      // Pemetaan: Device ID -> NIM Terbaru
+      if (!window.homeDeviceMap[row.device_id]) {
+        window.homeDeviceMap[row.device_id] = row.user_id;
+      }
+      // Pemetaan: NIM -> Device ID Terbaru
+      if (!window.homeStudentMap[row.user_id]) {
+        window.homeStudentMap[row.user_id] = row.device_id;
+      }
     });
 
-    return jsonList.data[jsonList.data.length - 1]; // Mengembalikan absensi terbaru
+    // Kembalikan data presensi yang paling absolut terbaru (index 0) untuk fitur Auto-Catch (Input Kosong)
+    return jsonList.data[0]; 
   } catch (error) {
     return null;
   }
